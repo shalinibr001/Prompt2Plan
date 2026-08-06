@@ -1,0 +1,19 @@
+---
+description: Keep Prompt2Plan synced with GitHub after every code update
+alwaysApply: true
+---
+
+# GitHub sync (Prompt2Plan)
+
+Remote repository: https://github.com/shalinibr001/Prompt2Plan  
+Default branch: `master`  
+Remote name: `origin`
+
+Whenever you finish a meaningful code change in this project:
+
+1. Stage relevant files (never commit secrets like `.env`, `.env.local`, credentials).
+2. Commit with a concise message focused on why.
+3. Push to `origin` on the current branch (`git push -u origin HEAD` if upstream is missing).
+4. If push is rejected due to remote commits, pull with rebase (`git pull --rebase origin master`) then push again — do not force-push unless the user explicitly asks.
+
+Do this without waiting for the user to ask, as long as the change is part of completing their request.
