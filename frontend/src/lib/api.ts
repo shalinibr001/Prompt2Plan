@@ -1,4 +1,30 @@
-import type { GenerateLayoutResponse } from "./types";
+/** Phase 3 – Frontend client for FastAPI /generate-layout */
+
+export interface ApiRoom {
+  id: string;
+  type: string;
+  width: number;
+  length: number;
+  label: string | null;
+  x: number;
+  z: number;
+  height: number;
+}
+
+export interface GenerateLayoutResponse {
+  prompt: string;
+  rooms: ApiRoom[];
+  bounds: {
+    min_x: number;
+    max_x: number;
+    min_z: number;
+    max_z: number;
+    width: number;
+    depth: number;
+  };
+  source: "ollama" | "gemini" | "fallback";
+  sample: boolean;
+}
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
 
@@ -23,9 +49,11 @@ export async function generateLayout(prompt: string): Promise<GenerateLayoutResp
     let detail = `Request failed (${res.status})`;
     try {
       const body = await res.json();
-      if (body?.detail) detail = typeof body.detail === "string" ? body.detail : JSON.stringify(body.detail);
+      if (body?.detail) {
+        detail = typeof body.detail === "string" ? body.detail : JSON.stringify(body.detail);
+      }
     } catch {
-      /* ignore parse errors */
+      /* ignore */
     }
     throw new ApiError(detail, res.status);
   }
@@ -33,13 +61,9 @@ export async function generateLayout(prompt: string): Promise<GenerateLayoutResp
   return res.json();
 }
 
-export async function fetchSamplePrompts(): Promise<string[]> {
-  try {
-    const res = await fetch(`${API_URL}/sample-prompts`);
-    if (!res.ok) return [];
-    const data = await res.json();
-    return data.prompts ?? [];
-  } catch {
-    return [];
-  }
-}
+export const SAMPLE_PROMPTS = [
+  "2 bedroom house with kitchen and hall",
+  "2BHK house with kitchen and balcony",
+  "Studio apartment with kitchenette and bathroom",
+  "3BHK family home with living room, dining, and two bathrooms",
+];

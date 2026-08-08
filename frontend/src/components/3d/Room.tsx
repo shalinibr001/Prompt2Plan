@@ -1,50 +1,42 @@
 "use client";
 
 import { Text } from "@react-three/drei";
-import { ROOM_COLORS, type PlacedRoom } from "@/lib/types";
+import { ROOM_COLORS, type RoomData } from "@/lib/types";
 
 const WALL_THICKNESS = 0.08;
 
 interface RoomProps {
-  room: PlacedRoom;
-  selected?: boolean;
+  room: RoomData;
 }
 
 /**
- * Rectangular room: floor slab, four walls, translucent volume, floating label.
+ * Phase 1 – Room as a 3D box with floor slab, walls, and a floating label.
  */
-export function Room({ room, selected = false }: RoomProps) {
+export function Room({ room }: RoomProps) {
   const color = ROOM_COLORS[room.type] ?? ROOM_COLORS.other;
-  const h = room.height;
+  const h = room.height ?? 2.8;
   const w = room.width;
   const d = room.length;
-  const wallH = h * 0.92;
+  const wallH = h * 0.9;
 
   return (
     <group position={[room.x, 0, room.z]}>
       {/* Floor slab */}
-      <mesh position={[0, 0.02, 0]} receiveShadow castShadow>
+      <mesh position={[0, 0.02, 0]} castShadow receiveShadow>
         <boxGeometry args={[w - 0.02, 0.04, d - 0.02]} />
         <meshStandardMaterial
           color={color}
           roughness={0.65}
           metalness={0.08}
           emissive={color}
-          emissiveIntensity={selected ? 0.22 : 0.08}
+          emissiveIntensity={0.1}
         />
       </mesh>
 
-      {/* Soft translucent volume so rooms read as spaces */}
+      {/* Soft volume so the room reads as a space */}
       <mesh position={[0, wallH / 2, 0]}>
         <boxGeometry args={[w - WALL_THICKNESS * 2, wallH, d - WALL_THICKNESS * 2]} />
-        <meshStandardMaterial
-          color={color}
-          transparent
-          opacity={0.12}
-          roughness={0.4}
-          metalness={0.1}
-          depthWrite={false}
-        />
+        <meshStandardMaterial color={color} transparent opacity={0.14} depthWrite={false} />
       </mesh>
 
       {/* Four walls */}
@@ -65,9 +57,8 @@ export function Room({ room, selected = false }: RoomProps) {
         rotateY
       />
 
-      {/* Label */}
       <Text
-        position={[0, h + 0.15, 0]}
+        position={[0, h + 0.2, 0]}
         fontSize={0.35}
         color="#E8EDF7"
         anchorX="center"

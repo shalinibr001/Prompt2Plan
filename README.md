@@ -2,37 +2,38 @@
 
 Convert natural-language prompts into interactive **3D floor plans**.
 
-```
-"2BHK house with kitchen and balcony"  →  placed rooms JSON  →  lit 3D viewer
-```
+Built strictly against the MVP roadmap (Phases 1 → 5).
+
+## MVP phases
+
+| Phase | Goal | Status |
+|-------|------|--------|
+| 1 | Hardcoded 3D rooms (bedroom, kitchen, hall) + OrbitControls | ✅ |
+| 2 | Manual “number of rooms” input (no AI) | ✅ |
+| 3 | FastAPI + Ollama `POST /generate-layout` | ✅ |
+| 4 | Grid layout engine (no overlap, adjacency) | ✅ |
+| 5 | Premium dark SaaS UI, shadows, Framer Motion | ✅ |
 
 ## Stack
 
-| Layer    | Tech                                                    |
-|----------|---------------------------------------------------------|
-| Frontend | Next.js · R3F · Tailwind · Zustand · Framer Motion      |
-| Backend  | FastAPI · Ollama (primary) · Gemini (fallback)          |
+- **Frontend:** Next.js (App Router) · TypeScript · R3F · Tailwind · Zustand · Framer Motion  
+- **Backend:** FastAPI · Ollama (primary) · Gemini (optional fallback)
 
 ## Quick start
 
-### 1. Backend
+### Backend
 
 ```bash
 cd backend
 python -m venv .venv
-.venv\Scripts\activate          # Windows
+.venv\Scripts\activate
 pip install -r requirements.txt
 copy .env.example .env
-
-# Optional — free local LLM
-ollama pull llama3.2
-
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+ollama pull llama3.2   # optional but recommended
+uvicorn app.main:app --reload --port 8000
 ```
 
-API docs: http://localhost:8000/docs
-
-### 2. Frontend
+### Frontend
 
 ```bash
 cd frontend
@@ -40,45 +41,33 @@ npm install
 npm run dev
 ```
 
-App: http://localhost:3000
+- App: http://localhost:3000  
+- API docs: http://localhost:8000/docs  
 
-## Features
-
-- **Prompt → layout** via Ollama (Gemini / heuristic fallback)
-- **Improved layout engine** — edge-aligned packing, shared-wall scoring, adjacency hints, centered AABB
-- **Premium dark SaaS UI** — glassmorphism, neon indigo/cyan, Framer Motion
-- **Realistic 3D** — directional shadows, contact shadows, environment lighting, orbit controls
+On load you see **Phase 1** hardcoded rooms. Use “Build rooms” for Phase 2, or type a prompt for Phase 3+.
 
 ## Sample prompts
 
+- `2 bedroom house with kitchen and hall`
 - `2BHK house with kitchen and balcony`
 - `Studio apartment with kitchenette and bathroom`
-- `3BHK family home with living room, dining, and two bathrooms`
-- `Open plan loft with living, kitchen, office, and balcony`
 
-## Project structure
+## Structure
 
 ```
 prompt2plan/
-├── backend/
-│   └── app/
-│       ├── main.py
-│       ├── models/
-│       ├── routes/
-│       └── services/          # llm.py + layout_engine.py
-└── frontend/
-    └── src/
-        ├── app/               # Next.js App Router
-        ├── components/
-        │   ├── 3d/            # Room, Floor, SceneCanvas
-        │   └── ui/            # Navbar, PromptInput, Sidebar
-        ├── lib/
-        └── store/
+├── backend/app/
+│   ├── main.py
+│   ├── routes/layout.py      # Phase 3
+│   └── services/
+│       ├── llm.py            # Ollama → Gemini → heuristic
+│       └── layout_engine.py  # Phase 4
+└── frontend/src/
+    ├── lib/types.ts          # Phase 1 hardcoded + Phase 2 generator
+    ├── components/3d/        # Room, Floor, SceneCanvas
+    ├── components/ui/        # Prompt, Sidebar, Navbar
+    └── store/planStore.ts
 ```
-
-## Roadmap (later)
-
-- Drag & resize rooms · Save layouts · Export image · Multi-floor
 
 ## License
 

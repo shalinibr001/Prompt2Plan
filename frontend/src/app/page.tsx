@@ -6,6 +6,7 @@ import { Navbar } from "@/components/ui/Navbar";
 import { PromptInput } from "@/components/ui/PromptInput";
 import { Sidebar } from "@/components/ui/Sidebar";
 
+/** Canvas is client-only (WebGL). */
 const SceneCanvas = dynamic(
   () => import("@/components/3d/SceneCanvas").then((m) => m.SceneCanvas),
   {
@@ -18,15 +19,19 @@ const SceneCanvas = dynamic(
   },
 );
 
+/**
+ * Phase 5 – Premium SaaS shell.
+ * On load, Zustand seeds Phase 1 hardcoded rooms so 3 boxes are visible immediately.
+ */
 export default function HomePage() {
   return (
     <div className="relative min-h-screen overflow-hidden">
-      {/* Atmosphere */}
       <div className="pointer-events-none absolute inset-0 bg-hero-glow" />
       <div
         className="pointer-events-none absolute inset-0 opacity-40"
         style={{
-          backgroundImage: "radial-gradient(circle at 1px 1px, rgba(99,102,241,0.15) 1px, transparent 0)",
+          backgroundImage:
+            "radial-gradient(circle at 1px 1px, rgba(99,102,241,0.15) 1px, transparent 0)",
           backgroundSize: "28px 28px",
           maskImage: "radial-gradient(ellipse 70% 60% at 50% 30%, black, transparent)",
         }}
@@ -37,7 +42,6 @@ export default function HomePage() {
       <Navbar />
 
       <main className="relative z-10 mx-auto flex w-full max-w-7xl flex-col px-4 pb-10 md:px-8">
-        {/* Hero — brand first, one composition */}
         <section className="flex flex-col items-center pb-10 pt-6 text-center md:pt-10">
           <motion.p
             initial={{ opacity: 0, y: 8 }}
@@ -57,7 +61,7 @@ export default function HomePage() {
             transition={{ duration: 0.5, delay: 0.08 }}
             className="mt-4 max-w-xl text-base text-slate-400 md:text-lg"
           >
-            Describe a home in plain English. Get an interactive 3D floor plan in seconds.
+            Phase 1 loads three hardcoded rooms. Use manual count or AI prompts to rebuild the plan.
           </motion.p>
 
           <motion.div
@@ -70,7 +74,6 @@ export default function HomePage() {
           </motion.div>
         </section>
 
-        {/* Workspace */}
         <motion.section
           id="workspace"
           initial={{ opacity: 0, y: 16 }}
@@ -82,7 +85,9 @@ export default function HomePage() {
 
           <div className="glass-strong relative min-h-[480px] overflow-hidden rounded-2xl p-2 shadow-glow md:min-h-[560px]">
             <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-between px-4 py-3">
-              <span className="text-xs font-medium uppercase tracking-wider text-slate-500">3D Viewer</span>
+              <span className="text-xs font-medium uppercase tracking-wider text-slate-500">
+                3D Viewer
+              </span>
               <span className="rounded-full border border-white/10 bg-ink/60 px-2.5 py-0.5 text-[10px] text-slate-400 backdrop-blur">
                 Shadows · Orbit · Zoom
               </span>
@@ -94,7 +99,7 @@ export default function HomePage() {
         </motion.section>
 
         <footer className="mt-10 flex flex-col items-center justify-between gap-2 border-t border-white/5 pt-6 text-xs text-slate-600 sm:flex-row">
-          <p>Built with Next.js · React Three Fiber · FastAPI · Ollama</p>
+          <p>MVP Phases 1–5 · Next.js · R3F · FastAPI · Ollama</p>
           <p>Dark theme · Glassmorphism · Local-first AI</p>
         </footer>
       </main>

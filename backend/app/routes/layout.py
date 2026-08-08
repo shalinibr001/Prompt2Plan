@@ -10,11 +10,11 @@ router = APIRouter(tags=["layout"])
 
 # Sample prompts exposed to the frontend for quick demos.
 SAMPLE_PROMPTS = [
+    "2 bedroom house with kitchen and hall",
     "2BHK house with kitchen and balcony",
     "Studio apartment with kitchenette and bathroom",
     "3BHK family home with living room, dining, and two bathrooms",
     "Open plan loft with living, kitchen, office, and balcony",
-    "Compact 1BHK with hall, kitchen, bedroom and bathroom",
 ]
 
 

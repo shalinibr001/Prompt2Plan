@@ -4,14 +4,15 @@ import { motion } from "framer-motion";
 import { usePlanStore } from "@/store/planStore";
 import { ROOM_COLORS, type RoomType } from "@/lib/types";
 
+/** Phase 5 – sidebar controls + room list */
 export function Sidebar() {
   const rooms = usePlanStore((s) => s.rooms);
   const source = usePlanStore((s) => s.source);
-  const bounds = usePlanStore((s) => s.bounds);
   const loading = usePlanStore((s) => s.loading);
   const lastPrompt = usePlanStore((s) => s.lastPrompt);
   const regenerate = usePlanStore((s) => s.regenerate);
   const clear = usePlanStore((s) => s.clear);
+  const loadHardcoded = usePlanStore((s) => s.loadHardcoded);
 
   const types = Array.from(new Set(rooms.map((r) => r.type))) as RoomType[];
 
@@ -23,12 +24,20 @@ export function Sidebar() {
           <button
             type="button"
             className="btn-primary w-full"
-            disabled={loading || !lastPrompt}
+            disabled={loading}
             onClick={() => void regenerate()}
           >
             Regenerate
           </button>
-          <button type="button" className="btn-ghost w-full" disabled={loading || !rooms.length} onClick={clear}>
+          <button type="button" className="btn-ghost w-full" disabled={loading} onClick={loadHardcoded}>
+            Reset sample
+          </button>
+          <button
+            type="button"
+            className="btn-ghost w-full"
+            disabled={loading || !rooms.length}
+            onClick={clear}
+          >
             Clear
           </button>
         </div>
@@ -38,7 +47,7 @@ export function Sidebar() {
         <h2 className="font-display text-sm font-semibold tracking-wide text-slate-200">Layout</h2>
 
         {!rooms.length ? (
-          <p className="mt-4 text-sm text-slate-500">No rooms yet. Generate a plan to see details.</p>
+          <p className="mt-4 text-sm text-slate-500">No rooms yet.</p>
         ) : (
           <motion.div
             initial={{ opacity: 0 }}
@@ -48,9 +57,7 @@ export function Sidebar() {
           >
             <div className="grid grid-cols-2 gap-2 text-xs">
               <Stat label="Rooms" value={String(rooms.length)} />
-              <Stat label="Source" value={source ?? "—"} />
-              <Stat label="Width" value={bounds ? `${bounds.width.toFixed(1)} m` : "—"} />
-              <Stat label="Depth" value={bounds ? `${bounds.depth.toFixed(1)} m` : "—"} />
+              <Stat label="Source" value={source} />
             </div>
 
             {lastPrompt && (
@@ -67,7 +74,10 @@ export function Sidebar() {
                 >
                   <span
                     className="h-2.5 w-2.5 shrink-0 rounded-full"
-                    style={{ background: ROOM_COLORS[room.type], boxShadow: `0 0 8px ${ROOM_COLORS[room.type]}66` }}
+                    style={{
+                      background: ROOM_COLORS[room.type],
+                      boxShadow: `0 0 8px ${ROOM_COLORS[room.type]}66`,
+                    }}
                   />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm text-slate-200">{room.label ?? room.type}</p>

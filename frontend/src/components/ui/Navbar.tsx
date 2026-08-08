@@ -16,7 +16,7 @@ export function Navbar() {
         </div>
         <div>
           <p className="font-display text-lg font-semibold tracking-tight text-white">Prompt2Plan</p>
-          <p className="text-[11px] text-slate-500">Prompt → interactive 3D floor plans</p>
+          <p className="text-[11px] text-slate-500">MVP · Prompt → 3D floor plans</p>
         </div>
       </div>
 
@@ -33,7 +33,7 @@ export function Navbar() {
           API
         </a>
         <span className="rounded-full border border-neon-cyan/30 bg-neon-cyan/10 px-3 py-1 text-xs text-neon-cyan">
-          Local · Free LLM
+          Phases 1–5
         </span>
       </nav>
     </motion.header>
