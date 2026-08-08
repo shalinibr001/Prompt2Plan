@@ -66,19 +66,19 @@ export const HARDCODED_LAYOUT: { rooms: RoomData[] } = {
   ],
 };
 
-/** Colors used by the Room mesh. */
+/** Muted Apple-like room accents (soft, not neon). */
 export const ROOM_COLORS: Record<RoomType, string> = {
-  bedroom: "#6366F1",
-  kitchen: "#F59E0B",
-  hall: "#64748B",
-  living: "#22D3EE",
-  bathroom: "#38BDF8",
-  balcony: "#34D399",
-  dining: "#A78BFA",
-  office: "#818CF8",
-  closet: "#94A3B8",
-  utility: "#FB923C",
-  garage: "#78716C",
+  bedroom: "#6B8CFF",
+  kitchen: "#D4A574",
+  hall: "#8E8E93",
+  living: "#7EB6FF",
+  bathroom: "#8EC5E8",
+  balcony: "#7DCFB6",
+  dining: "#B8A1E3",
+  office: "#8FA3D9",
+  closet: "#A1A1AA",
+  utility: "#C4A484",
+  garage: "#8A8580",
   other: "#9CA3AF",
 };
 

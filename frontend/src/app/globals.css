@@ -3,13 +3,12 @@
 @tailwind utilities;
 
 :root {
-  --bg: #0b0f19;
-  --bg-elevated: #121826;
-  --border: rgba(148, 163, 184, 0.12);
-  --accent: #6366f1;
-  --accent-cyan: #22d3ee;
-  --text: #e8edf7;
-  --muted: #94a3b8;
+  --bg: #0a0a0a;
+  --surface: rgba(255, 255, 255, 0.05);
+  --text: #ffffff;
+  --muted: #a1a1aa;
+  --accent: #3b82f6;
+  --border: rgba(255, 255, 255, 0.1);
 }
 
 html,
@@ -22,35 +21,70 @@ body {
   background: var(--bg);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: "kern" 1, "liga" 1;
 }
 
-/* Soft scrollbar */
+::selection {
+  background: rgba(59, 130, 246, 0.35);
+  color: #fff;
+}
+
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(99, 102, 241, 0.35);
+  background: rgba(255, 255, 255, 0.12);
   border-radius: 999px;
 }
 
 @layer components {
   .glass {
-    @apply border border-white/10 bg-white/[0.04] backdrop-blur-xl;
+    @apply border border-white/10 bg-white/[0.05] backdrop-blur-2xl;
   }
 
-  .glass-strong {
-    @apply border border-white/10 bg-ink-50/80 backdrop-blur-2xl;
+  .glass-panel {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(28px) saturate(140%);
+    -webkit-backdrop-filter: blur(28px) saturate(140%);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  }
+
+  .btn-pill {
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium tracking-tight transition-all duration-300 ease-apple disabled:cursor-not-allowed disabled:opacity-40;
   }
 
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-neon-indigo to-indigo-500 px-5 py-2.5 text-sm font-semibold text-white shadow-glow transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply btn-pill bg-[#3B82F6] text-white shadow-glow-sm hover:scale-[1.04] hover:shadow-glow active:scale-[0.98];
   }
 
   .btn-ghost {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-sm font-medium text-slate-200 transition hover:border-neon-cyan/40 hover:bg-white/[0.06] disabled:cursor-not-allowed disabled:opacity-40;
+    @apply btn-pill border border-white/10 bg-white/[0.04] text-white/90 hover:scale-[1.04] hover:bg-white/[0.08] hover:shadow-glow-sm active:scale-[0.98];
   }
+
+  .icon-btn {
+    @apply flex h-9 w-9 items-center justify-center rounded-full border border-transparent bg-white/[0.04] text-white/70 transition-all duration-300 ease-apple hover:scale-105 hover:bg-white/[0.08] hover:text-white;
+  }
+}
+
+/* Soft vignette over immersive canvas */
+.vignette {
+  background: radial-gradient(
+    ellipse 75% 65% at 50% 45%,
+    transparent 40%,
+    rgba(10, 10, 10, 0.55) 100%
+  );
+}
+
+/* Placeholder fade */
+.prompt-field::placeholder {
+  color: rgba(161, 161, 170, 0.7);
+  transition: color 0.35s ease, opacity 0.35s ease;
+}
+.prompt-field:focus::placeholder {
+  opacity: 0.35;
 }

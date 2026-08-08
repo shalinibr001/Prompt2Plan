@@ -29,7 +29,7 @@ export function Room({ room }: RoomProps) {
           roughness={0.65}
           metalness={0.08}
           emissive={color}
-          emissiveIntensity={0.1}
+          emissiveIntensity={0.05}
         />
       </mesh>
 
@@ -93,7 +93,7 @@ function Wall({
       receiveShadow
     >
       <boxGeometry args={[length, height, thickness]} />
-      <meshStandardMaterial color="#1E293B" roughness={0.85} metalness={0.05} />
+      <meshStandardMaterial color="#2A2A2C" roughness={0.88} metalness={0.04} />
     </mesh>
   );
 }

@@ -6,103 +6,60 @@ import { Navbar } from "@/components/ui/Navbar";
 import { PromptInput } from "@/components/ui/PromptInput";
 import { Sidebar } from "@/components/ui/Sidebar";
 
-/** Canvas is client-only (WebGL). */
 const SceneCanvas = dynamic(
   () => import("@/components/3d/SceneCanvas").then((m) => m.SceneCanvas),
   {
     ssr: false,
     loading: () => (
-      <div className="flex h-full min-h-[420px] items-center justify-center rounded-2xl bg-ink-50/50">
-        <span className="text-sm text-slate-500">Loading 3D viewer…</span>
+      <div className="flex h-full w-full items-center justify-center bg-apple-bg">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="flex flex-col items-center gap-3"
+        >
+          <span className="h-8 w-8 animate-spin rounded-full border-2 border-white/10 border-t-[#3B82F6]" />
+          <span className="text-xs font-light tracking-wide text-apple-muted">Preparing scene…</span>
+        </motion.div>
       </div>
     ),
   },
 );
 
 /**
- * Phase 5 – Premium SaaS shell.
- * On load, Zustand seeds Phase 1 hardcoded rooms so 3 boxes are visible immediately.
+ * Immersive Apple-style shell:
+ * full-bleed 3D · floating glass chrome · bottom prompt pill
  */
 export default function HomePage() {
   return (
-    <div className="relative min-h-screen overflow-hidden">
-      <div className="pointer-events-none absolute inset-0 bg-hero-glow" />
-      <div
-        className="pointer-events-none absolute inset-0 opacity-40"
-        style={{
-          backgroundImage:
-            "radial-gradient(circle at 1px 1px, rgba(99,102,241,0.15) 1px, transparent 0)",
-          backgroundSize: "28px 28px",
-          maskImage: "radial-gradient(ellipse 70% 60% at 50% 30%, black, transparent)",
-        }}
-      />
-      <div className="pointer-events-none absolute -left-32 top-40 h-72 w-72 rounded-full bg-neon-indigo/20 blur-[100px]" />
-      <div className="pointer-events-none absolute -right-20 bottom-20 h-80 w-80 rounded-full bg-neon-cyan/10 blur-[120px]" />
+    <div className="relative h-[100dvh] w-full overflow-hidden bg-apple-bg">
+      {/* Full immersive 3D */}
+      <div className="absolute inset-0">
+        <SceneCanvas />
+      </div>
+
+      {/* Soft vignette + subtle top wash */}
+      <div className="vignette pointer-events-none absolute inset-0 z-10" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-40 bg-gradient-to-b from-black/50 to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-56 bg-gradient-to-t from-black/70 via-black/25 to-transparent" />
 
       <Navbar />
 
-      <main className="relative z-10 mx-auto flex w-full max-w-7xl flex-col px-4 pb-10 md:px-8">
-        <section className="flex flex-col items-center pb-10 pt-6 text-center md:pt-10">
-          <motion.p
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.45 }}
-            className="font-display text-5xl font-bold tracking-tight text-white md:text-6xl"
-          >
-            Prompt
-            <span className="bg-gradient-to-r from-neon-indigo via-neon-violet to-neon-cyan bg-clip-text text-transparent">
-              2
-            </span>
-            Plan
-          </motion.p>
-          <motion.p
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.08 }}
-            className="mt-4 max-w-xl text-base text-slate-400 md:text-lg"
-          >
-            Phase 1 loads three hardcoded rooms. Use manual count or AI prompts to rebuild the plan.
-          </motion.p>
-
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.55, delay: 0.16 }}
-            className="mt-8 flex w-full justify-center"
-          >
-            <PromptInput />
-          </motion.div>
-        </section>
-
-        <motion.section
-          id="workspace"
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.22 }}
-          className="grid gap-4 lg:grid-cols-[280px_1fr]"
-        >
+      {/* Floating sidebar */}
+      <div className="pointer-events-none absolute bottom-36 left-4 top-20 z-20 md:bottom-28 md:left-6 md:top-24">
+        <div className="pointer-events-auto h-full max-h-full overflow-hidden">
           <Sidebar />
+        </div>
+      </div>
 
-          <div className="glass-strong relative min-h-[480px] overflow-hidden rounded-2xl p-2 shadow-glow md:min-h-[560px]">
-            <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-between px-4 py-3">
-              <span className="text-xs font-medium uppercase tracking-wider text-slate-500">
-                3D Viewer
-              </span>
-              <span className="rounded-full border border-white/10 bg-ink/60 px-2.5 py-0.5 text-[10px] text-slate-400 backdrop-blur">
-                Shadows · Orbit · Zoom
-              </span>
-            </div>
-            <div className="h-[calc(100%-0.5rem)] min-h-[460px] pt-8">
-              <SceneCanvas />
-            </div>
-          </div>
-        </motion.section>
-
-        <footer className="mt-10 flex flex-col items-center justify-between gap-2 border-t border-white/5 pt-6 text-xs text-slate-600 sm:flex-row">
-          <p>MVP Phases 1–5 · Next.js · R3F · FastAPI · Ollama</p>
-          <p>Dark theme · Glassmorphism · Local-first AI</p>
-        </footer>
-      </main>
+      {/* Center-bottom floating prompt */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, ease: [0.25, 0.1, 0.25, 1], delay: 0.2 }}
+        className="absolute inset-x-0 bottom-6 z-30 md:bottom-8"
+      >
+        <PromptInput />
+      </motion.div>
     </div>
   );
 }

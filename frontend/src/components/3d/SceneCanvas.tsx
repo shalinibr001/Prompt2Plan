@@ -1,69 +1,94 @@
 "use client";
 
-import { Suspense } from "react";
-import { Canvas } from "@react-three/fiber";
+import { Suspense, useEffect, useMemo, useRef } from "react";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import {
   ContactShadows,
   Environment,
   OrbitControls,
   PerspectiveCamera,
 } from "@react-three/drei";
+import { AnimatePresence, motion } from "framer-motion";
+import * as THREE from "three";
 import { usePlanStore } from "@/store/planStore";
 import { Floor } from "./Floor";
 import { Room } from "./Room";
 
-/**
- * Phase 1 scene core + Phase 5 lighting/shadows.
- * Reads rooms from Zustand so Phases 2–3 can update the view dynamically.
- */
+/** Smooth camera framing when the layout span changes. */
+function CameraRig({ span }: { span: number }) {
+  const { camera } = useThree();
+  const goal = useRef(new THREE.Vector3(12, 10, 12));
+
+  useEffect(() => {
+    const d = Math.max(10, span * 1.3);
+    goal.current.set(d * 0.72, d * 0.58, d * 0.72);
+  }, [span]);
+
+  useFrame(() => {
+    camera.position.lerp(goal.current, 0.04);
+  });
+
+  return null;
+}
+
 function SceneContent() {
   const rooms = usePlanStore((s) => s.rooms);
 
+  const span = useMemo(() => {
+    if (!rooms.length) return 12;
+    const xs = rooms.flatMap((r) => [r.x - r.width / 2, r.x + r.width / 2]);
+    const zs = rooms.flatMap((r) => [r.z - r.length / 2, r.z + r.length / 2]);
+    return Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...zs) - Math.min(...zs), 8);
+  }, [rooms]);
+
   return (
     <>
-      <PerspectiveCamera makeDefault position={[10, 10, 10]} fov={42} />
+      <PerspectiveCamera makeDefault position={[12, 10, 12]} fov={40} near={0.1} far={200} />
+      <CameraRig span={span} />
 
-      {/* Phase 1 – OrbitControls: zoom, rotate, pan */}
       <OrbitControls
         makeDefault
         enableDamping
-        dampingFactor={0.08}
+        dampingFactor={0.06}
         minDistance={4}
-        maxDistance={50}
-        maxPolarAngle={Math.PI / 2.05}
-        target={[0, 0.5, 0]}
+        maxDistance={55}
+        maxPolarAngle={Math.PI / 2.08}
+        target={[0, 0.4, 0]}
       />
 
-      {/* Phase 1 lights */}
-      <ambientLight intensity={0.35} color="#A5B4FC" />
+      <ambientLight intensity={0.32} color="#E8EEF9" />
       <directionalLight
         castShadow
-        position={[12, 18, 8]}
-        intensity={1.35}
-        color="#FFF7ED"
+        position={[14, 20, 10]}
+        intensity={1.15}
+        color="#FFF8F0"
         shadow-mapSize-width={2048}
         shadow-mapSize-height={2048}
-        shadow-camera-far={50}
-        shadow-camera-left={-20}
-        shadow-camera-right={20}
-        shadow-camera-top={20}
-        shadow-camera-bottom={-20}
+        shadow-camera-far={60}
+        shadow-camera-left={-22}
+        shadow-camera-right={22}
+        shadow-camera-top={22}
+        shadow-camera-bottom={-22}
         shadow-bias={-0.0002}
       />
+      <directionalLight position={[-12, 8, -8]} intensity={0.28} color="#93C5FD" />
+      <hemisphereLight args={["#1A1A1A", "#0A0A0A", 0.35]} />
+      <Environment preset="apartment" environmentIntensity={0.28} />
 
-      {/* Phase 5 – richer lighting */}
-      <directionalLight position={[-10, 8, -6]} intensity={0.35} color="#22D3EE" />
-      <hemisphereLight args={["#1E293B", "#0B0F19", 0.4]} />
-      <pointLight position={[0, 6, 0]} intensity={0.35} color="#818CF8" distance={30} />
-      <Environment preset="city" environmentIntensity={0.3} />
-
-      <Floor />
+      <Floor size={Math.max(28, span + 10)} />
 
       {rooms.map((room) => (
         <Room key={room.id} room={room} />
       ))}
 
-      <ContactShadows position={[0, 0.001, 0]} opacity={0.5} scale={28} blur={2.2} far={8} color="#020617" />
+      <ContactShadows
+        position={[0, 0.001, 0]}
+        opacity={0.45}
+        scale={Math.max(24, span + 12)}
+        blur={2.6}
+        far={10}
+        color="#000000"
+      />
     </>
   );
 }
@@ -73,32 +98,63 @@ export function SceneCanvas() {
   const loading = usePlanStore((s) => s.loading);
 
   return (
-    <div className="relative h-full min-h-[420px] w-full overflow-hidden rounded-2xl">
-      <Canvas shadows dpr={[1, 2]} gl={{ antialias: true }} className="h-full w-full">
-        <color attach="background" args={["#0B0F19"]} />
-        <fog attach="fog" args={["#0B0F19", 28, 55]} />
+    <div className="relative h-full w-full">
+      <Canvas
+        shadows
+        dpr={[1, 1.75]}
+        gl={{ antialias: true, alpha: false, powerPreference: "high-performance" }}
+        className="h-full w-full"
+      >
+        <color attach="background" args={["#0A0A0A"]} />
+        <fog attach="fog" args={["#0A0A0A", 26, 58]} />
         <Suspense fallback={null}>
           <SceneContent />
         </Suspense>
       </Canvas>
 
-      {!rooms.length && !loading && (
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-          <p className="text-sm text-slate-500">No rooms to display</p>
-        </div>
-      )}
+      <AnimatePresence>
+        {!rooms.length && !loading && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="pointer-events-none absolute inset-0 flex items-center justify-center"
+          >
+            <p className="text-sm font-light tracking-wide text-apple-muted">
+              Your floor plan will appear here
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {loading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-ink/40 backdrop-blur-sm">
-          <div className="flex items-center gap-3 rounded-full border border-white/10 bg-ink-50/90 px-5 py-3 text-sm text-slate-200 shadow-glow">
-            <span className="h-2 w-2 animate-pulse rounded-full bg-neon-cyan" />
-            Generating layout…
-          </div>
-        </div>
-      )}
+      <AnimatePresence>
+        {loading && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.35 }}
+            className="absolute inset-0 flex items-center justify-center bg-black/30 backdrop-blur-[2px]"
+          >
+            <motion.div
+              initial={{ scale: 0.96, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.96, opacity: 0 }}
+              className="glass-panel flex items-center gap-3 rounded-full px-5 py-3"
+            >
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/15 border-t-[#3B82F6]" />
+              <span className="text-sm font-light tracking-tight text-white/90">
+                Generating layout…
+              </span>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      <div className="pointer-events-none absolute bottom-4 left-4 rounded-lg border border-white/10 bg-ink-50/70 px-3 py-1.5 text-[11px] text-slate-400 backdrop-blur">
-        Drag to orbit · Scroll to zoom · Right-drag to pan
+      <div className="pointer-events-none absolute right-6 top-24 hidden lg:block">
+        <p className="rounded-full border border-white/10 bg-black/30 px-3 py-1 text-[10px] font-light tracking-wide text-apple-muted backdrop-blur-xl">
+          Drag to orbit · Scroll to zoom
+        </p>
       </div>
     </div>
   );

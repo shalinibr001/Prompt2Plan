@@ -8,30 +8,37 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        ink: {
-          DEFAULT: "#0B0F19",
-          50: "#151B2B",
-          100: "#1A2133",
-          200: "#222A3F",
-        },
-        neon: {
-          indigo: "#6366F1",
-          cyan: "#22D3EE",
-          violet: "#818CF8",
+        apple: {
+          bg: "#0A0A0A",
+          surface: "rgba(255,255,255,0.05)",
+          text: "#FFFFFF",
+          muted: "#A1A1AA",
+          accent: "#3B82F6",
+          border: "rgba(255,255,255,0.10)",
         },
       },
       fontFamily: {
-        sans: ["var(--font-sora)", "system-ui", "sans-serif"],
-        display: ["var(--font-sora)", "system-ui", "sans-serif"],
-        mono: ["var(--font-geist-mono)", "ui-monospace", "monospace"],
+        sans: [
+          "var(--font-inter)",
+          "-apple-system",
+          "BlinkMacSystemFont",
+          "SF Pro Text",
+          "Segoe UI",
+          "system-ui",
+          "sans-serif",
+        ],
       },
       boxShadow: {
-        glow: "0 0 40px rgba(99, 102, 241, 0.25)",
-        "glow-cyan": "0 0 32px rgba(34, 211, 238, 0.2)",
+        soft: "0 8px 32px rgba(0,0,0,0.45)",
+        panel: "0 20px 60px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.06)",
+        glow: "0 0 28px rgba(59,130,246,0.28)",
+        "glow-sm": "0 0 16px rgba(59,130,246,0.18)",
       },
-      backgroundImage: {
-        "hero-glow":
-          "radial-gradient(ellipse 80% 50% at 50% -20%, rgba(99,102,241,0.35), transparent), radial-gradient(ellipse 60% 40% at 80% 50%, rgba(34,211,238,0.12), transparent)",
+      transitionTimingFunction: {
+        apple: "cubic-bezier(0.25, 0.1, 0.25, 1)",
+      },
+      borderRadius: {
+        "4xl": "2rem",
       },
     },
   },
