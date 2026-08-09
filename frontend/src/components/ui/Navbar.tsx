@@ -61,7 +61,9 @@ export function Navbar({ onToggleSidebar, sidebarOpen }: NavbarProps) {
             )}
           </button>
 
-          <p className="text-small font-medium tracking-[0.2em] text-white">Prompt2Plan</p>
+          <a href="/" className="text-small font-medium tracking-[0.2em] text-white transition-opacity hover:opacity-80">
+            Prompt2Plan
+          </a>
         </div>
 
         <div className="flex items-center gap-2">

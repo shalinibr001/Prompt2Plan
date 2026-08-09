@@ -10,8 +10,9 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Prompt2Plan",
-  description: "Turn natural language into elegant 3D floor plans.",
+  title: "Prompt2Plan — Design spaces with words",
+  description:
+    "Transform simple prompts into interactive 3D floor plans instantly. Apple-inspired AI floor planning.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
