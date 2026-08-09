@@ -5,9 +5,9 @@ import { AnimatePresence, motion } from "framer-motion";
 import { usePlanStore } from "@/store/planStore";
 import { SAMPLE_PROMPTS } from "@/lib/api";
 
-/**
- * Apple-style floating pill prompt — bottom center, glass + focus glow.
- */
+const ease = [0.4, 0, 0.2, 1] as const;
+
+/** Hero floating prompt — pill, glass, focus glow + scale */
 export function PromptInput() {
   const prompt = usePlanStore((s) => s.prompt);
   const setPrompt = usePlanStore((s) => s.setPrompt);
@@ -26,25 +26,25 @@ export function PromptInput() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-2xl px-4">
+    <div className="mx-auto w-full max-w-2xl px-4 md:px-6">
       <AnimatePresence>
         {error && (
           <motion.p
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 6 }}
-            className="mb-3 text-center text-xs text-red-400/90"
+            transition={{ duration: 0.3, ease }}
+            className="mb-3 text-center text-small text-red-400/90"
           >
             {error}
           </motion.p>
         )}
       </AnimatePresence>
 
-      {/* Sample chips — minimal */}
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.15 }}
+        transition={{ duration: 0.45, delay: 0.1, ease }}
         className="mb-3 flex flex-wrap justify-center gap-2"
       >
         {SAMPLE_PROMPTS.slice(0, 3).map((sample) => (
@@ -52,15 +52,16 @@ export function PromptInput() {
             key={sample}
             type="button"
             disabled={loading}
-            whileHover={{ scale: 1.04 }}
-            whileTap={{ scale: 0.98 }}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.97 }}
+            transition={{ duration: 0.3, ease }}
             onClick={() => {
               setPrompt(sample);
               void generateFromPrompt(sample);
             }}
-            className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[11px] font-light text-apple-muted backdrop-blur-xl transition-colors duration-300 hover:border-white/20 hover:text-white/90"
+            className="rounded-full border border-white/[0.08] bg-white/[0.05] px-3 py-1.5 text-[12px] font-light text-ds-secondary backdrop-blur-md transition-colors duration-fast hover:border-white/20 hover:text-white"
           >
-            {sample.length > 36 ? `${sample.slice(0, 34)}…` : sample}
+            {sample.length > 34 ? `${sample.slice(0, 32)}…` : sample}
           </motion.button>
         ))}
       </motion.div>
@@ -69,11 +70,13 @@ export function PromptInput() {
         onSubmit={onSubmit}
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.55, ease: [0.25, 0.1, 0.25, 1] }}
+        transition={{ duration: 0.55, ease }}
       >
-        <div
-          className={`glass-panel relative flex items-center gap-2 rounded-full p-1.5 pl-5 transition-shadow duration-500 ease-apple ${
-            focused ? "shadow-glow ring-1 ring-[#3B82F6]/35" : "shadow-soft"
+        <motion.div
+          animate={{ scale: focused ? 1.01 : 1 }}
+          transition={{ duration: 0.3, ease }}
+          className={`glass-panel relative flex items-center gap-2 rounded-full p-2 pl-4 transition-shadow duration-med ease-apple sm:pl-5 ${
+            focused ? "shadow-glow ring-1 ring-[#3B82F6]/40" : "shadow-soft"
           }`}
         >
           <input
@@ -85,14 +88,14 @@ export function PromptInput() {
             placeholder="Describe a floor plan…"
             disabled={loading}
             aria-label="Floor plan prompt"
-            className="prompt-field min-w-0 flex-1 bg-transparent py-3 text-[15px] font-light tracking-tight text-white outline-none placeholder:font-light"
+            className="prompt-field min-w-0 flex-1 bg-transparent py-3 text-body font-normal tracking-tight text-white outline-none"
           />
 
           <motion.button
             type="button"
             aria-label="Manual tools"
             whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.96 }}
+            whileTap={{ scale: 0.97 }}
             onClick={() => setShowTools((v) => !v)}
             className="icon-btn shrink-0"
           >
@@ -105,8 +108,8 @@ export function PromptInput() {
             type="submit"
             disabled={loading}
             whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.96 }}
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#3B82F6] text-white shadow-glow-sm transition-shadow duration-300 hover:shadow-glow disabled:opacity-50"
+            whileTap={{ scale: 0.97 }}
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent-gradient text-white shadow-glow-sm transition-shadow duration-fast hover:shadow-glow disabled:opacity-50"
           >
             {loading ? (
               <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
@@ -116,7 +119,7 @@ export function PromptInput() {
               </svg>
             )}
           </motion.button>
-        </div>
+        </motion.div>
       </motion.form>
 
       <AnimatePresence>
@@ -125,11 +128,11 @@ export function PromptInput() {
             initial={{ opacity: 0, y: 8, height: 0 }}
             animate={{ opacity: 1, y: 0, height: "auto" }}
             exit={{ opacity: 0, y: 8, height: 0 }}
-            transition={{ duration: 0.35, ease: [0.25, 0.1, 0.25, 1] }}
+            transition={{ duration: 0.35, ease }}
             className="mt-3 overflow-hidden"
           >
-            <div className="glass-panel mx-auto flex max-w-md items-center gap-2 rounded-full p-2">
-              <span className="pl-3 text-[11px] font-light uppercase tracking-wider text-apple-muted">
+            <div className="glass-panel mx-auto flex max-w-md flex-wrap items-center gap-2 rounded-full p-2 sm:flex-nowrap">
+              <span className="pl-3 text-[11px] font-light uppercase tracking-wider text-ds-muted">
                 Rooms
               </span>
               <input
@@ -138,10 +141,10 @@ export function PromptInput() {
                 max={12}
                 value={roomCount}
                 onChange={(e) => setRoomCount(Number(e.target.value))}
-                className="w-16 rounded-full border border-white/10 bg-black/30 px-3 py-1.5 text-center text-sm font-light text-white outline-none focus:border-[#3B82F6]/40"
+                className="w-16 rounded-full border border-white/[0.08] bg-black/30 px-3 py-1.5 text-center text-small text-white outline-none focus:border-[#3B82F6]/40 focus:shadow-glow-sm"
                 aria-label="Enter number of rooms"
               />
-              <button type="button" className="btn-ghost flex-1 py-2 text-xs" onClick={generateByCount}>
+              <button type="button" className="btn-ghost flex-1 py-2 text-small" onClick={generateByCount}>
                 Build
               </button>
             </div>
