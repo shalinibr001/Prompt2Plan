@@ -1,20 +1,25 @@
 /** Download helpers */
 
-import type { LayoutSource, RoomData } from "@/lib/types";
+import type { DoorData, FurnitureData, LayoutSource, RoomData, WindowData } from "@/lib/types";
 import { computeClientBounds } from "@/lib/geometry/rooms";
 
-/** Export the current plan as a downloadable JSON file. */
 export function downloadPlanJson(opts: {
   prompt: string | null;
   rooms: RoomData[];
+  doors?: DoorData[];
+  furniture?: FurnitureData[];
+  windows?: WindowData[];
   source: LayoutSource;
 }) {
   const payload = {
-    version: 1,
+    version: 2,
     exportedAt: new Date().toISOString(),
     prompt: opts.prompt,
     source: opts.source,
     rooms: opts.rooms,
+    doors: opts.doors ?? [],
+    furniture: opts.furniture ?? [],
+    windows: opts.windows ?? [],
     bounds: computeClientBounds(opts.rooms),
   };
 

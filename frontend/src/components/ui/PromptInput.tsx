@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { usePlanStore } from "@/store/planStore";
 import { SAMPLE_PROMPTS } from "@/lib/ai/client";
@@ -11,6 +11,17 @@ const ease = [0.4, 0, 0.2, 1] as const;
 export function PromptInput() {
   const prompt = usePlanStore((s) => s.prompt);
   const setPrompt = usePlanStore((s) => s.setPrompt);
+  const [localPrompt, setLocalPrompt] = useState(prompt);
+
+  // Debounce store updates while typing for snappier input.
+  useEffect(() => {
+    const t = setTimeout(() => setPrompt(localPrompt), 180);
+    return () => clearTimeout(t);
+  }, [localPrompt, setPrompt]);
+
+  useEffect(() => {
+    setLocalPrompt(prompt);
+  }, [prompt]);
   const roomCount = usePlanStore((s) => s.roomCount);
   const setRoomCount = usePlanStore((s) => s.setRoomCount);
   const generateByCount = usePlanStore((s) => s.generateByCount);
@@ -22,7 +33,8 @@ export function PromptInput() {
 
   const onSubmit = (e: FormEvent) => {
     e.preventDefault();
-    void generateFromPrompt();
+    setPrompt(localPrompt);
+    void generateFromPrompt(localPrompt);
   };
 
   return (
@@ -56,6 +68,7 @@ export function PromptInput() {
             whileTap={{ scale: 0.97 }}
             transition={{ duration: 0.3, ease }}
             onClick={() => {
+              setLocalPrompt(sample);
               setPrompt(sample);
               void generateFromPrompt(sample);
             }}
@@ -79,17 +92,17 @@ export function PromptInput() {
             focused ? "shadow-glow ring-1 ring-[#3B82F6]/40" : "shadow-soft"
           }`}
         >
-          <input
-            type="text"
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            onFocus={() => setFocused(true)}
-            onBlur={() => setFocused(false)}
-            placeholder="Describe a floor plan…"
-            disabled={loading}
-            aria-label="Floor plan prompt"
-            className="prompt-field min-w-0 flex-1 bg-transparent py-3 text-body font-normal tracking-tight text-white outline-none"
-          />
+            <input
+              type="text"
+              value={localPrompt}
+              onChange={(e) => setLocalPrompt(e.target.value)}
+              onFocus={() => setFocused(true)}
+              onBlur={() => setFocused(false)}
+              placeholder="Describe a floor plan…"
+              disabled={loading}
+              aria-label="Floor plan prompt"
+              className="prompt-field min-w-0 flex-1 bg-transparent py-3 text-body font-normal tracking-tight text-white outline-none"
+            />
 
           <motion.button
             type="button"

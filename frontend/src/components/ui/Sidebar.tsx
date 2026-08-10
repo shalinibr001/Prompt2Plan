@@ -14,6 +14,8 @@ interface SidebarProps {
 /** Floating glass sidebar with controls, export, history, theme. */
 export function Sidebar({ open = true, onClose }: SidebarProps) {
   const rooms = usePlanStore((s) => s.rooms);
+  const doors = usePlanStore((s) => s.doors);
+  const furniture = usePlanStore((s) => s.furniture);
   const source = usePlanStore((s) => s.source);
   const loading = usePlanStore((s) => s.loading);
   const lastPrompt = usePlanStore((s) => s.lastPrompt);
@@ -23,6 +25,8 @@ export function Sidebar({ open = true, onClose }: SidebarProps) {
   const clear = usePlanStore((s) => s.clear);
   const loadHardcoded = usePlanStore((s) => s.loadHardcoded);
   const exportJson = usePlanStore((s) => s.exportJson);
+  const sharePlan = usePlanStore((s) => s.sharePlan);
+  const shareUrl = usePlanStore((s) => s.shareUrl);
   const loadFromHistory = usePlanStore((s) => s.loadFromHistory);
   const wipeHistory = usePlanStore((s) => s.wipeHistory);
   const toggleThemeMode = usePlanStore((s) => s.toggleThemeMode);
@@ -91,10 +95,25 @@ export function Sidebar({ open = true, onClose }: SidebarProps) {
             whileTap={{ scale: 0.97 }}
             className="btn-ghost w-full"
             disabled={loading || !rooms.length}
+            onClick={() => void sharePlan()}
+          >
+            Share link
+          </motion.button>
+          <motion.button
+            type="button"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.97 }}
+            className="btn-ghost w-full"
+            disabled={loading || !rooms.length}
             onClick={exportJson}
           >
             Export JSON
           </motion.button>
+          {shareUrl && (
+            <p className="truncate px-1 text-[10px] font-light text-[#3B82F6]" title={shareUrl}>
+              Copied · {shareUrl.replace(/^https?:\/\//, "")}
+            </p>
+          )}
           <motion.button
             type="button"
             whileHover={{ scale: 1.05 }}
@@ -137,6 +156,8 @@ export function Sidebar({ open = true, onClose }: SidebarProps) {
           <div className="mt-4 min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
             <div className="grid grid-cols-2 gap-2">
               <Stat label="Rooms" value={String(rooms.length)} />
+              <Stat label="Doors" value={String(doors.length)} />
+              <Stat label="Furniture" value={String(furniture.length)} />
               <Stat label="Mode" value={source === "hardcoded" ? "Sample" : source} />
             </div>
 
@@ -153,7 +174,15 @@ export function Sidebar({ open = true, onClose }: SidebarProps) {
                   initial={{ opacity: 0, y: 6 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.35, delay: Math.min(i * 0.04, 0.3), ease }}
-                  className="flex items-center gap-3 rounded-card border border-white/[0.08] bg-white/[0.03] px-3 py-2.5 transition-colors duration-fast hover:bg-white/[0.06]"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => usePlanStore.getState().setFocusedRoom(room.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      usePlanStore.getState().setFocusedRoom(room.id);
+                    }
+                  }}
+                  className="flex cursor-pointer items-center gap-3 rounded-card border border-white/[0.08] bg-white/[0.03] px-3 py-2.5 transition-colors duration-fast hover:bg-white/[0.06]"
                 >
                   <span
                     className="h-2 w-2 shrink-0 rounded-full"

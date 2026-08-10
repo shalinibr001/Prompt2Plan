@@ -1,14 +1,25 @@
-"""Layout generation endpoints."""
+"""Layout generation + persistence endpoints."""
 
 from fastapi import APIRouter, HTTPException
 
-from app.models.layout import GenerateLayoutRequest, GenerateLayoutResponse
-from app.services.layout_engine import arrange_rooms, compute_bounds
+from app.models.layout import (
+    GenerateLayoutRequest,
+    GenerateLayoutResponse,
+    SavePlanRequest,
+    SavePlanResponse,
+)
+from app.services.layout_engine import (
+    arrange_rooms,
+    build_doors_and_adjacency,
+    compute_bounds,
+    place_furniture,
+    place_windows,
+)
 from app.services.llm import LayoutLLMService
+from app.services.store import get_plan, save_plan
 
 router = APIRouter(tags=["layout"])
 
-# Sample prompts exposed to the frontend for quick demos.
 SAMPLE_PROMPTS = [
     "2 bedroom house with kitchen and hall",
     "2BHK house with kitchen and balcony",
@@ -18,29 +29,58 @@ SAMPLE_PROMPTS = [
 ]
 
 
+def _build_full_layout(prompt: str, room_specs, source: str, sample: bool) -> GenerateLayoutResponse:
+    placed = arrange_rooms(room_specs)
+    doors, adjacency = build_doors_and_adjacency(placed)
+    furniture = place_furniture(placed)
+    windows = place_windows(placed, doors)
+    bounds = compute_bounds(placed)
+    return GenerateLayoutResponse(
+        prompt=prompt,
+        rooms=placed,
+        doors=doors,
+        adjacency=adjacency,
+        furniture=furniture,
+        windows=windows,
+        bounds=bounds,
+        source=source,  # type: ignore[arg-type]
+        sample=sample,
+    )
+
+
 @router.post("/generate-layout", response_model=GenerateLayoutResponse)
 async def generate_layout(body: GenerateLayoutRequest) -> GenerateLayoutResponse:
-    """Convert a natural-language prompt into a placed 3D floor-plan layout."""
     prompt = body.prompt.strip()
     if not prompt:
         raise HTTPException(status_code=400, detail="Prompt cannot be empty")
 
-    # Stateless service — cheap to construct; keeps route free of global mutable state.
     llm = LayoutLLMService()
     room_specs, source = await llm.generate_rooms(prompt)
-    placed = arrange_rooms(room_specs)
-    bounds = compute_bounds(placed)
-
-    return GenerateLayoutResponse(
-        prompt=prompt,
-        rooms=placed,
-        bounds=bounds,
-        source=source,
-        sample=source == "fallback",
-    )
+    return _build_full_layout(prompt, room_specs, source, sample=source == "fallback")
 
 
 @router.get("/sample-prompts")
 async def sample_prompts() -> dict[str, list[str]]:
-    """Return curated example prompts for the UI."""
     return {"prompts": SAMPLE_PROMPTS}
+
+
+@router.post("/save-plan", response_model=SavePlanResponse)
+async def save_plan_route(body: SavePlanRequest) -> SavePlanResponse:
+    payload = body.model_dump(by_alias=True)
+    plan_id = save_plan(payload)
+    return SavePlanResponse(id=plan_id, url=f"/plan/{plan_id}")
+
+
+@router.get("/plan/{plan_id}", response_model=GenerateLayoutResponse)
+async def load_plan(plan_id: str) -> GenerateLayoutResponse:
+    data = get_plan(plan_id)
+    if not data:
+        raise HTTPException(status_code=404, detail="Plan not found")
+    data["id"] = plan_id
+    # Ensure required fields exist for older payloads.
+    data.setdefault("doors", [])
+    data.setdefault("adjacency", [])
+    data.setdefault("furniture", [])
+    data.setdefault("windows", [])
+    data.setdefault("sample", False)
+    return GenerateLayoutResponse(**data)

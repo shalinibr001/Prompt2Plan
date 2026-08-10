@@ -14,18 +14,54 @@ import { usePlanStore } from "@/store/planStore";
 import { Floor } from "./Floor";
 import { Room } from "./Room";
 
-/** Smooth camera framing when the layout span changes. */
-function CameraRig({ span }: { span: number }) {
+function CinematicCamera({
+  span,
+  focusedRoomId,
+  generationKey,
+}: {
+  span: number;
+  focusedRoomId: string | null;
+  generationKey: number;
+}) {
   const { camera } = useThree();
-  const goal = useRef(new THREE.Vector3(12, 10, 12));
+  const rooms = usePlanStore((s) => s.rooms);
+  const goalPos = useRef(new THREE.Vector3(14, 12, 14));
+  const goalTarget = useRef(new THREE.Vector3(0, 0.4, 0));
+  const intro = useRef(true);
+  const controls = useThree((s) => s.controls) as unknown as {
+    target: THREE.Vector3;
+    update: () => void;
+  } | null;
 
   useEffect(() => {
-    const d = Math.max(10, span * 1.3);
-    goal.current.set(d * 0.72, d * 0.58, d * 0.72);
-  }, [span]);
+    intro.current = true;
+    const d = Math.max(12, span * 1.45);
+    // Fly-in from high & far
+    camera.position.set(d * 1.4, d * 1.1, d * 1.4);
+    goalPos.current.set(d * 0.75, d * 0.58, d * 0.75);
+    goalTarget.current.set(0, 0.4, 0);
+  }, [generationKey, span, camera]);
+
+  useEffect(() => {
+    if (!focusedRoomId) return;
+    const room = rooms.find((r) => r.id === focusedRoomId);
+    if (!room) return;
+    const dist = Math.max(room.width, room.length) * 1.8 + 4;
+    goalPos.current.set(room.x + dist * 0.7, dist * 0.85, room.z + dist * 0.7);
+    goalTarget.current.set(room.x, 0.5, room.z);
+    intro.current = false;
+  }, [focusedRoomId, rooms]);
 
   useFrame(() => {
-    camera.position.lerp(goal.current, 0.04);
+    const alpha = intro.current ? 0.035 : 0.06;
+    camera.position.lerp(goalPos.current, alpha);
+    if (controls?.target) {
+      controls.target.lerp(goalTarget.current, alpha);
+      controls.update();
+    }
+    if (camera.position.distanceTo(goalPos.current) < 0.08) {
+      intro.current = false;
+    }
   });
 
   return null;
@@ -33,6 +69,14 @@ function CameraRig({ span }: { span: number }) {
 
 function SceneContent() {
   const rooms = usePlanStore((s) => s.rooms);
+  const doors = usePlanStore((s) => s.doors);
+  const furniture = usePlanStore((s) => s.furniture);
+  const windows = usePlanStore((s) => s.windows);
+  const hoveredRoomId = usePlanStore((s) => s.hoveredRoomId);
+  const focusedRoomId = usePlanStore((s) => s.focusedRoomId);
+  const generationKey = usePlanStore((s) => s.generationKey);
+  const setHoveredRoom = usePlanStore((s) => s.setHoveredRoom);
+  const setFocusedRoom = usePlanStore((s) => s.setFocusedRoom);
 
   const span = useMemo(() => {
     if (!rooms.length) return 12;
@@ -43,24 +87,24 @@ function SceneContent() {
 
   return (
     <>
-      <PerspectiveCamera makeDefault position={[12, 10, 12]} fov={40} near={0.1} far={200} />
-      <CameraRig span={span} />
+      <PerspectiveCamera makeDefault position={[18, 14, 18]} fov={40} near={0.1} far={200} />
+      <CinematicCamera span={span} focusedRoomId={focusedRoomId} generationKey={generationKey} />
 
       <OrbitControls
         makeDefault
         enableDamping
-        dampingFactor={0.06}
-        minDistance={4}
-        maxDistance={55}
+        dampingFactor={0.07}
+        minDistance={3}
+        maxDistance={60}
         maxPolarAngle={Math.PI / 2.08}
         target={[0, 0.4, 0]}
       />
 
-      <ambientLight intensity={0.32} color="#E8EEF9" />
+      <ambientLight intensity={0.28} color="#E8EEF9" />
       <directionalLight
         castShadow
         position={[14, 20, 10]}
-        intensity={1.15}
+        intensity={1.25}
         color="#FFF8F0"
         shadow-mapSize-width={2048}
         shadow-mapSize-height={2048}
@@ -71,21 +115,30 @@ function SceneContent() {
         shadow-camera-bottom={-22}
         shadow-bias={-0.0002}
       />
-      <directionalLight position={[-12, 8, -8]} intensity={0.28} color="#93C5FD" />
-      <hemisphereLight args={["#1A1A1A", "#0A0A0A", 0.35]} />
-      <Environment preset="apartment" environmentIntensity={0.28} />
+      <directionalLight position={[-12, 8, -8]} intensity={0.32} color="#93C5FD" />
+      <hemisphereLight args={["#243044", "#0A0A0A", 0.4]} />
+      <Environment preset="apartment" environmentIntensity={0.35} />
 
       <Floor size={Math.max(28, span + 10)} />
 
       {rooms.map((room) => (
-        <Room key={room.id} room={room} />
+        <Room
+          key={room.id}
+          room={room}
+          doors={doors}
+          windows={windows}
+          furniture={furniture}
+          highlighted={hoveredRoomId === room.id || focusedRoomId === room.id}
+          onHover={setHoveredRoom}
+          onClick={setFocusedRoom}
+        />
       ))}
 
       <ContactShadows
         position={[0, 0.001, 0]}
-        opacity={0.45}
+        opacity={0.5}
         scale={Math.max(24, span + 12)}
-        blur={2.6}
+        blur={2.8}
         far={10}
         color="#000000"
       />
@@ -106,7 +159,7 @@ export function SceneCanvas() {
         className="h-full w-full"
       >
         <color attach="background" args={["#0A0A0A"]} />
-        <fog attach="fog" args={["#0A0A0A", 26, 58]} />
+        <fog attach="fog" args={["#0A0A0A", 24, 56]} />
         <Suspense fallback={null}>
           <SceneContent />
         </Suspense>
@@ -120,9 +173,12 @@ export function SceneCanvas() {
             exit={{ opacity: 0 }}
             className="pointer-events-none absolute inset-0 flex items-center justify-center"
           >
-            <p className="text-sm font-light tracking-wide text-apple-muted">
-              Your floor plan will appear here
-            </p>
+            <div className="glass-panel rounded-2xl px-6 py-5 text-center">
+              <p className="text-sm font-medium text-white/90">Your floor plan will appear here</p>
+              <p className="mt-1 text-xs font-light text-apple-muted">
+                Describe a home or try a sample prompt
+              </p>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -133,27 +189,26 @@ export function SceneCanvas() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.35 }}
             className="absolute inset-0 flex items-center justify-center bg-black/30 backdrop-blur-[2px]"
           >
-            <motion.div
-              initial={{ scale: 0.96, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.96, opacity: 0 }}
-              className="glass-panel flex items-center gap-3 rounded-full px-5 py-3"
-            >
-              <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/15 border-t-[#3B82F6]" />
-              <span className="text-sm font-light tracking-tight text-white/90">
-                Generating layout…
-              </span>
-            </motion.div>
+            <div className="glass-panel w-[min(92vw,280px)] space-y-3 rounded-2xl px-5 py-4">
+              <div className="flex items-center gap-3">
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/15 border-t-[#3B82F6]" />
+                <span className="text-sm font-light text-white/90">Designing layout…</span>
+              </div>
+              <div className="space-y-2">
+                <div className="h-2 animate-pulse rounded-full bg-white/10" />
+                <div className="h-2 w-4/5 animate-pulse rounded-full bg-white/[0.07]" />
+                <div className="h-2 w-3/5 animate-pulse rounded-full bg-white/[0.05]" />
+              </div>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
 
       <div className="pointer-events-none absolute right-6 top-24 hidden lg:block">
         <p className="rounded-full border border-white/10 bg-black/30 px-3 py-1 text-[10px] font-light tracking-wide text-apple-muted backdrop-blur-xl">
-          Drag to orbit · Scroll to zoom
+          Hover to highlight · Click to focus · Drag to orbit
         </p>
       </div>
     </div>

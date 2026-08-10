@@ -1,6 +1,5 @@
 /**
  * Shared domain types for Prompt2Plan.
- * Single source of truth for room / layout shapes on the frontend.
  */
 
 export const ROOM_TYPES = [
@@ -33,6 +32,42 @@ export interface RoomData {
   label?: string;
 }
 
+export interface DoorData {
+  id: string;
+  from: string;
+  to: string;
+  x: number;
+  z: number;
+  axis: "x" | "z";
+  width: number;
+}
+
+export interface FurnitureData {
+  id: string;
+  room_id: string;
+  kind: string;
+  x: number;
+  z: number;
+  width: number;
+  length: number;
+  rotation_y: number;
+}
+
+export interface WindowData {
+  id: string;
+  room_id: string;
+  x: number;
+  z: number;
+  axis: "x" | "z";
+  width: number;
+}
+
+export interface AdjacencyEdge {
+  a: string;
+  b: string;
+  via: "door" | "open";
+}
+
 export interface LayoutBounds {
   min_x: number;
   max_x: number;
@@ -46,11 +81,13 @@ export interface PlanSnapshot {
   id: string;
   prompt: string;
   rooms: RoomData[];
+  doors: DoorData[];
+  furniture: FurnitureData[];
+  windows: WindowData[];
   source: LayoutSource;
   createdAt: number;
 }
 
-/** Soft Apple-like room accents */
 export const ROOM_COLORS: Record<RoomType, string> = {
   bedroom: "#6B8CFF",
   kitchen: "#D4A574",

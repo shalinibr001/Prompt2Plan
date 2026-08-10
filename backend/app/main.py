@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
 from app.routes.layout import router as layout_router
+from app.services.store import init_db
 
 logging.basicConfig(
     level=logging.INFO,
@@ -16,6 +17,7 @@ logging.basicConfig(
 )
 
 settings = get_settings()
+init_db()
 
 app = FastAPI(
     title="Prompt2Plan API",

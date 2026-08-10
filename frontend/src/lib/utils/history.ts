@@ -1,8 +1,8 @@
 /** Local plan history (localStorage) */
 
-import type { LayoutSource, PlanSnapshot, RoomData } from "@/lib/types";
+import type { DoorData, FurnitureData, LayoutSource, PlanSnapshot, RoomData, WindowData } from "@/lib/types";
 
-const KEY = "prompt2plan.history.v1";
+const KEY = "prompt2plan.history.v2";
 const MAX = 12;
 
 function canUseStorage() {
@@ -24,6 +24,9 @@ export function loadHistory(): PlanSnapshot[] {
 export function saveHistoryEntry(entry: {
   prompt: string;
   rooms: RoomData[];
+  doors: DoorData[];
+  furniture: FurnitureData[];
+  windows: WindowData[];
   source: LayoutSource;
 }): PlanSnapshot[] {
   if (!canUseStorage()) return [];
@@ -31,6 +34,9 @@ export function saveHistoryEntry(entry: {
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
     prompt: entry.prompt,
     rooms: entry.rooms,
+    doors: entry.doors,
+    furniture: entry.furniture,
+    windows: entry.windows,
     source: entry.source,
     createdAt: Date.now(),
   };

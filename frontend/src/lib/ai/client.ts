@@ -1,15 +1,17 @@
 /**
- * AI / layout API client with Zod validation + typed errors.
+ * AI / layout API client with Zod validation.
  */
 
 import {
   GenerateLayoutResponseSchema,
+  toDoors,
+  toFurniture,
   toRoomData,
+  toWindows,
   type ValidatedLayoutResponse,
 } from "@/lib/ai/schema";
-import type { RoomData } from "@/lib/types";
+import type { AdjacencyEdge, DoorData, FurnitureData, RoomData, WindowData } from "@/lib/types";
 
-/** Prefer same-origin Next.js proxy; fall back to direct FastAPI URL. */
 const API_PATH = "/api/generate-layout";
 
 export class ApiError extends Error {
@@ -33,12 +35,36 @@ export const SAMPLE_PROMPTS = [
 export interface GenerateResult {
   prompt: string;
   rooms: RoomData[];
+  doors: DoorData[];
+  furniture: FurnitureData[];
+  windows: WindowData[];
+  adjacency: AdjacencyEdge[];
   bounds: ValidatedLayoutResponse["bounds"];
   source: ValidatedLayoutResponse["source"];
   sample: boolean;
+  id?: string | null;
 }
 
-/** Call layout API (via Next proxy) and validate the structured response. */
+function parseLayout(json: unknown): GenerateResult {
+  const parsed = GenerateLayoutResponseSchema.safeParse(json);
+  if (!parsed.success) {
+    throw new ApiError(`Invalid layout payload: ${parsed.error.issues[0]?.message ?? "schema error"}`);
+  }
+  const data = parsed.data;
+  return {
+    prompt: data.prompt,
+    rooms: toRoomData(data.rooms),
+    doors: toDoors(data.doors),
+    furniture: toFurniture(data.furniture),
+    windows: toWindows(data.windows),
+    adjacency: data.adjacency,
+    bounds: data.bounds,
+    source: data.source,
+    sample: data.sample ?? false,
+    id: data.id,
+  };
+}
+
 export async function generateLayout(prompt: string): Promise<GenerateResult> {
   let res: Response;
   try {
@@ -64,18 +90,31 @@ export async function generateLayout(prompt: string): Promise<GenerateResult> {
     throw new ApiError(detail, res.status);
   }
 
-  const json: unknown = await res.json();
-  const parsed = GenerateLayoutResponseSchema.safeParse(json);
-  if (!parsed.success) {
-    throw new ApiError(`Invalid layout payload: ${parsed.error.issues[0]?.message ?? "schema error"}`);
-  }
+  return parseLayout(await res.json());
+}
 
-  const data = parsed.data;
-  return {
-    prompt: data.prompt,
-    rooms: toRoomData(data.rooms),
-    bounds: data.bounds,
-    source: data.source,
-    sample: data.sample ?? false,
-  };
+export async function savePlan(payload: Record<string, unknown>): Promise<{ id: string; url: string }> {
+  let res: Response;
+  try {
+    res = await fetch("/api/save-plan", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+  } catch {
+    throw new ApiError("Cannot reach the API. Is the FastAPI server running on port 8000?");
+  }
+  if (!res.ok) throw new ApiError("Could not save plan", res.status);
+  return res.json();
+}
+
+export async function loadPlan(id: string): Promise<GenerateResult> {
+  let res: Response;
+  try {
+    res = await fetch(`/api/plan/${encodeURIComponent(id)}`, { cache: "no-store" });
+  } catch {
+    throw new ApiError("Cannot reach the API. Is the FastAPI server running on port 8000?");
+  }
+  if (!res.ok) throw new ApiError("Plan not found", res.status);
+  return parseLayout(await res.json());
 }
