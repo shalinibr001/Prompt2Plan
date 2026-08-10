@@ -1,15 +1,23 @@
 "use client";
 
 import { create } from "zustand";
-import { generateLayout, loadPlan, savePlan } from "@/lib/ai/client";
+import {
+  fetchPlanVersions,
+  generateLayout,
+  loadPlan,
+  savePlan,
+  type PlanVersionSummary,
+} from "@/lib/ai/client";
 import { generateRoomsByCount, HARDCODED_LAYOUT } from "@/lib/geometry/rooms";
 import { downloadPlanJson } from "@/lib/utils/export";
 import { clearHistory, loadHistory, saveHistoryEntry } from "@/lib/utils/history";
 import { applyTheme, getStoredTheme, toggleTheme, type ThemeMode } from "@/lib/utils/theme";
 import type {
+  AdjacencyEdge,
   DoorData,
   FurnitureData,
   LayoutSource,
+  PipelineStep,
   PlanSnapshot,
   RoomData,
   WindowData,
@@ -20,6 +28,13 @@ interface PlanState {
   doors: DoorData[];
   furniture: FurnitureData[];
   windows: WindowData[];
+  adjacency: AdjacencyEdge[];
+  pipeline: PipelineStep[];
+  floors: number;
+  activeFloor: number | "all";
+  planId: string | null;
+  version: number | null;
+  versions: PlanVersionSummary[];
   roomCount: number;
   prompt: string;
   source: LayoutSource;
@@ -37,7 +52,8 @@ interface PlanState {
   setPrompt: (prompt: string) => void;
   hydrate: () => void;
   setHoveredRoom: (id: string | null) => void;
-  setFocusedRoom: (id: string | null) => void;
+  setFocusedRoom: (id: string) => void;
+  setActiveFloor: (floor: number | "all") => void;
 
   loadHardcoded: () => void;
   generateByCount: () => void;
@@ -46,7 +62,7 @@ interface PlanState {
   clear: () => void;
   exportJson: () => void;
   sharePlan: () => Promise<string | null>;
-  loadSharedPlan: (id: string) => Promise<void>;
+  loadSharedPlan: (id: string, version?: number) => Promise<void>;
   loadFromHistory: (id: string) => void;
   wipeHistory: () => void;
   toggleThemeMode: () => void;
@@ -57,6 +73,13 @@ export const usePlanStore = create<PlanState>((set, get) => ({
   doors: [],
   furniture: [],
   windows: [],
+  adjacency: [],
+  pipeline: [],
+  floors: 1,
+  activeFloor: "all",
+  planId: null,
+  version: null,
+  versions: [],
   roomCount: 3,
   prompt: "",
   source: "hardcoded",
@@ -74,6 +97,7 @@ export const usePlanStore = create<PlanState>((set, get) => ({
   setPrompt: (prompt) => set({ prompt, error: null }),
   setHoveredRoom: (id) => set({ hoveredRoomId: id }),
   setFocusedRoom: (id) => set({ focusedRoomId: id }),
+  setActiveFloor: (floor) => set({ activeFloor: floor }),
 
   hydrate: () => {
     const theme = getStoredTheme();
@@ -87,6 +111,10 @@ export const usePlanStore = create<PlanState>((set, get) => ({
       doors: [],
       furniture: [],
       windows: [],
+      adjacency: [],
+      pipeline: [],
+      floors: 1,
+      activeFloor: "all",
       source: "hardcoded",
       error: null,
       lastPrompt: null,
@@ -106,6 +134,9 @@ export const usePlanStore = create<PlanState>((set, get) => ({
       doors: [],
       furniture: [],
       windows: [],
+      adjacency: [],
+      pipeline: [],
+      floors: 1,
       source: "manual",
       error: null,
       lastPrompt: null,
@@ -145,6 +176,10 @@ export const usePlanStore = create<PlanState>((set, get) => ({
         doors: data.doors,
         furniture: data.furniture,
         windows: data.windows,
+        adjacency: data.adjacency,
+        pipeline: data.pipeline,
+        floors: data.floors,
+        activeFloor: "all",
         source: data.source,
         lastPrompt: data.prompt,
         loading: false,
@@ -177,6 +212,9 @@ export const usePlanStore = create<PlanState>((set, get) => ({
       doors: [],
       furniture: [],
       windows: [],
+      adjacency: [],
+      pipeline: [],
+      floors: 1,
       error: null,
       lastPrompt: null,
       source: "manual",
@@ -184,7 +222,8 @@ export const usePlanStore = create<PlanState>((set, get) => ({
     }),
 
   exportJson: () => {
-    const { rooms, doors, furniture, windows, lastPrompt, prompt, source } = get();
+    const { rooms, doors, furniture, windows, lastPrompt, prompt, source, adjacency, pipeline, floors } =
+      get();
     if (!rooms.length) {
       set({ error: "Nothing to export yet." });
       return;
@@ -197,10 +236,25 @@ export const usePlanStore = create<PlanState>((set, get) => ({
       windows,
       source,
     });
+    void adjacency;
+    void pipeline;
+    void floors;
   },
 
   sharePlan: async () => {
-    const { rooms, doors, furniture, windows, lastPrompt, prompt, source } = get();
+    const {
+      rooms,
+      doors,
+      furniture,
+      windows,
+      adjacency,
+      pipeline,
+      floors,
+      lastPrompt,
+      prompt,
+      source,
+      planId,
+    } = get();
     if (!rooms.length) {
       set({ error: "Generate a plan before sharing." });
       return null;
@@ -214,7 +268,9 @@ export const usePlanStore = create<PlanState>((set, get) => ({
         doors,
         furniture,
         windows,
-        adjacency: [],
+        adjacency,
+        pipeline,
+        floors,
         bounds: {
           min_x: Math.min(...xs),
           max_x: Math.max(...xs),
@@ -224,11 +280,13 @@ export const usePlanStore = create<PlanState>((set, get) => ({
           depth: Math.max(...zs) - Math.min(...zs),
         },
         source,
+        plan_id: planId,
       };
-      const { url } = await savePlan(payload);
+      const { id, url, version } = await savePlan(payload);
       const full = `${window.location.origin}${url}`;
       await navigator.clipboard.writeText(full);
-      set({ shareUrl: full });
+      const versions = await fetchPlanVersions(id);
+      set({ shareUrl: full, planId: id, version, versions });
       return full;
     } catch (err) {
       set({ error: err instanceof Error ? err.message : "Share failed" });
@@ -236,15 +294,23 @@ export const usePlanStore = create<PlanState>((set, get) => ({
     }
   },
 
-  loadSharedPlan: async (id) => {
+  loadSharedPlan: async (id, version) => {
     set({ loading: true, error: null });
     try {
-      const data = await loadPlan(id);
+      const data = await loadPlan(id, version);
+      const versions = await fetchPlanVersions(id);
       set({
         rooms: data.rooms,
         doors: data.doors,
         furniture: data.furniture,
         windows: data.windows,
+        adjacency: data.adjacency,
+        pipeline: data.pipeline,
+        floors: data.floors,
+        activeFloor: "all",
+        planId: id,
+        version: data.version ?? version ?? null,
+        versions,
         source: data.source,
         lastPrompt: data.prompt,
         prompt: data.prompt,
@@ -267,6 +333,9 @@ export const usePlanStore = create<PlanState>((set, get) => ({
       doors: item.doors,
       furniture: item.furniture,
       windows: item.windows,
+      adjacency: [],
+      pipeline: [],
+      floors: 1,
       source: item.source,
       lastPrompt: item.prompt,
       prompt: item.prompt,

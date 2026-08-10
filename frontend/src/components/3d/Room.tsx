@@ -33,6 +33,7 @@ function RoomComponent({
   const h = room.height ?? 2.8;
   const w = room.width;
   const d = room.length;
+  const floorY = (room.floor ?? 0) * (h + 0.35);
 
   const roomDoors = useMemo(
     () => doors.filter((door) => door.from === room.id || door.to === room.id),
@@ -49,7 +50,7 @@ function RoomComponent({
 
   return (
     <group
-      position={[room.x, 0, room.z]}
+      position={[room.x, floorY, room.z]}
       onPointerOver={(e) => {
         e.stopPropagation();
         onHover?.(room.id);

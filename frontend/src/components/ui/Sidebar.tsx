@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { AdjacencyGraph } from "@/components/ui/AdjacencyGraph";
 import { usePlanStore } from "@/store/planStore";
 import { ROOM_COLORS, type RoomType } from "@/lib/types";
 
@@ -15,12 +16,19 @@ interface SidebarProps {
 export function Sidebar({ open = true, onClose }: SidebarProps) {
   const rooms = usePlanStore((s) => s.rooms);
   const doors = usePlanStore((s) => s.doors);
-  const furniture = usePlanStore((s) => s.furniture);
+  const adjacency = usePlanStore((s) => s.adjacency);
+  const pipeline = usePlanStore((s) => s.pipeline);
+  const floors = usePlanStore((s) => s.floors);
+  const activeFloor = usePlanStore((s) => s.activeFloor);
+  const versions = usePlanStore((s) => s.versions);
+  const planId = usePlanStore((s) => s.planId);
+  const version = usePlanStore((s) => s.version);
   const source = usePlanStore((s) => s.source);
   const loading = usePlanStore((s) => s.loading);
   const lastPrompt = usePlanStore((s) => s.lastPrompt);
   const history = usePlanStore((s) => s.history);
   const theme = usePlanStore((s) => s.theme);
+  const focusedRoomId = usePlanStore((s) => s.focusedRoomId);
   const regenerate = usePlanStore((s) => s.regenerate);
   const clear = usePlanStore((s) => s.clear);
   const loadHardcoded = usePlanStore((s) => s.loadHardcoded);
@@ -28,8 +36,11 @@ export function Sidebar({ open = true, onClose }: SidebarProps) {
   const sharePlan = usePlanStore((s) => s.sharePlan);
   const shareUrl = usePlanStore((s) => s.shareUrl);
   const loadFromHistory = usePlanStore((s) => s.loadFromHistory);
+  const loadSharedPlan = usePlanStore((s) => s.loadSharedPlan);
   const wipeHistory = usePlanStore((s) => s.wipeHistory);
   const toggleThemeMode = usePlanStore((s) => s.toggleThemeMode);
+  const setActiveFloor = usePlanStore((s) => s.setActiveFloor);
+  const setFocusedRoom = usePlanStore((s) => s.setFocusedRoom);
 
   const types = Array.from(new Set(rooms.map((r) => r.type))) as RoomType[];
 
@@ -157,14 +168,88 @@ export function Sidebar({ open = true, onClose }: SidebarProps) {
             <div className="grid grid-cols-2 gap-2">
               <Stat label="Rooms" value={String(rooms.length)} />
               <Stat label="Doors" value={String(doors.length)} />
-              <Stat label="Furniture" value={String(furniture.length)} />
+              <Stat label="Floors" value={String(floors)} />
               <Stat label="Mode" value={source === "hardcoded" ? "Sample" : source} />
             </div>
+
+            {floors > 1 && (
+              <div className="flex flex-wrap gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setActiveFloor("all")}
+                  className={`rounded-full px-2.5 py-1 text-[10px] ${
+                    activeFloor === "all"
+                      ? "bg-[#3B82F6]/30 text-white"
+                      : "border border-white/[0.08] text-ds-muted"
+                  }`}
+                >
+                  All floors
+                </button>
+                {Array.from({ length: floors }, (_, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => setActiveFloor(i)}
+                    className={`rounded-full px-2.5 py-1 text-[10px] ${
+                      activeFloor === i
+                        ? "bg-[#3B82F6]/30 text-white"
+                        : "border border-white/[0.08] text-ds-muted"
+                    }`}
+                  >
+                    L{i + 1}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <AdjacencyGraph
+              rooms={rooms}
+              adjacency={adjacency}
+              focusedRoomId={focusedRoomId}
+              onSelectRoom={setFocusedRoom}
+            />
+
+            {pipeline.length > 0 && (
+              <div className="rounded-card border border-white/[0.08] bg-black/25 px-3 py-2.5">
+                <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-ds-muted">
+                  Graph pipeline
+                </p>
+                <ul className="mt-2 space-y-1.5">
+                  {pipeline.slice(0, 5).map((step) => (
+                    <li key={`${step.name}-${step.detail.slice(0, 12)}`} className="text-[11px]">
+                      <span className="font-medium text-[#93C5FD]">{step.name}</span>
+                      <span className="ml-1 font-light text-ds-muted">{step.detail}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
             {lastPrompt && (
               <p className="rounded-card border border-white/[0.08] bg-black/25 px-3 py-2.5 text-small leading-relaxed text-ds-secondary">
                 “{lastPrompt}”
               </p>
+            )}
+
+            {planId && versions.length > 0 && (
+              <div className="border-t border-white/[0.06] pt-3">
+                <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.16em] text-ds-muted">
+                  Versions {version != null ? `· v${version}` : ""}
+                </p>
+                <ul className="space-y-1">
+                  {versions.slice(0, 5).map((v) => (
+                    <li key={v.version}>
+                      <button
+                        type="button"
+                        onClick={() => void loadSharedPlan(planId, v.version)}
+                        className="w-full truncate rounded-xl border border-transparent px-2 py-1.5 text-left text-[11px] font-light text-ds-secondary transition hover:border-white/[0.08] hover:bg-white/[0.04] hover:text-white"
+                      >
+                        v{v.version} · {v.prompt || "untitled"}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             )}
 
             <ul className="space-y-1.5">

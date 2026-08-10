@@ -16,6 +16,7 @@ export const ApiRoomSchema = z.object({
   x: z.number(),
   z: z.number(),
   height: z.number().positive().max(10).optional().default(2.8),
+  floor: z.number().int().min(0).max(5).optional().default(0),
 });
 
 export const DoorSchema = z.object({
@@ -71,6 +72,18 @@ export const GenerateLayoutResponseSchema = z.object({
   source: z.enum(["ollama", "gemini", "fallback"]),
   sample: z.boolean().optional().default(false),
   id: z.string().nullable().optional(),
+  floors: z.number().int().min(1).max(6).optional().default(1),
+  pipeline: z
+    .array(
+      z.object({
+        name: z.string(),
+        detail: z.string(),
+        meta: z.record(z.unknown()).optional().default({}),
+      }),
+    )
+    .optional()
+    .default([]),
+  version: z.number().int().optional().nullable(),
 });
 
 export type ValidatedLayoutResponse = z.infer<typeof GenerateLayoutResponseSchema>;
@@ -87,6 +100,7 @@ export function toRoomData(rooms: z.infer<typeof ApiRoomSchema>[]): RoomData[] {
       z: r.z,
       height: r.height ?? 2.8,
       label: r.label ?? r.type,
+      floor: r.floor ?? 0,
     };
   });
 }

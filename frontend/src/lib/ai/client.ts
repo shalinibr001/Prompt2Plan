@@ -10,7 +10,14 @@ import {
   toWindows,
   type ValidatedLayoutResponse,
 } from "@/lib/ai/schema";
-import type { AdjacencyEdge, DoorData, FurnitureData, RoomData, WindowData } from "@/lib/types";
+import type {
+  AdjacencyEdge,
+  DoorData,
+  FurnitureData,
+  PipelineStep,
+  RoomData,
+  WindowData,
+} from "@/lib/types";
 
 const API_PATH = "/api/generate-layout";
 
@@ -27,7 +34,7 @@ export class ApiError extends Error {
 export const SAMPLE_PROMPTS = [
   "2 bedroom house with kitchen and hall",
   "2BHK house with kitchen and balcony",
-  "Studio apartment with kitchenette and bathroom",
+  "2-storey duplex with 3 bedrooms and upstairs bathroom",
   "3BHK family home with living room, dining, and two bathrooms",
   "Open plan loft with living, kitchen, office, and balcony",
 ] as const;
@@ -43,6 +50,15 @@ export interface GenerateResult {
   source: ValidatedLayoutResponse["source"];
   sample: boolean;
   id?: string | null;
+  floors: number;
+  pipeline: PipelineStep[];
+  version?: number | null;
+}
+
+export interface PlanVersionSummary {
+  version: number;
+  created_at: string;
+  prompt: string;
 }
 
 function parseLayout(json: unknown): GenerateResult {
@@ -62,6 +78,9 @@ function parseLayout(json: unknown): GenerateResult {
     source: data.source,
     sample: data.sample ?? false,
     id: data.id,
+    floors: data.floors ?? 1,
+    pipeline: data.pipeline ?? [],
+    version: data.version,
   };
 }
 
@@ -93,7 +112,9 @@ export async function generateLayout(prompt: string): Promise<GenerateResult> {
   return parseLayout(await res.json());
 }
 
-export async function savePlan(payload: Record<string, unknown>): Promise<{ id: string; url: string }> {
+export async function savePlan(
+  payload: Record<string, unknown>,
+): Promise<{ id: string; url: string; version: number }> {
   let res: Response;
   try {
     res = await fetch("/api/save-plan", {
@@ -108,13 +129,21 @@ export async function savePlan(payload: Record<string, unknown>): Promise<{ id: 
   return res.json();
 }
 
-export async function loadPlan(id: string): Promise<GenerateResult> {
+export async function loadPlan(id: string, version?: number): Promise<GenerateResult> {
+  const qs = version != null ? `?version=${version}` : "";
   let res: Response;
   try {
-    res = await fetch(`/api/plan/${encodeURIComponent(id)}`, { cache: "no-store" });
+    res = await fetch(`/api/plan/${encodeURIComponent(id)}${qs}`, { cache: "no-store" });
   } catch {
     throw new ApiError("Cannot reach the API. Is the FastAPI server running on port 8000?");
   }
   if (!res.ok) throw new ApiError("Plan not found", res.status);
   return parseLayout(await res.json());
+}
+
+export async function fetchPlanVersions(id: string): Promise<PlanVersionSummary[]> {
+  const res = await fetch(`/api/plan/${encodeURIComponent(id)}/versions`, { cache: "no-store" });
+  if (!res.ok) return [];
+  const data = (await res.json()) as { versions?: PlanVersionSummary[] };
+  return data.versions ?? [];
 }

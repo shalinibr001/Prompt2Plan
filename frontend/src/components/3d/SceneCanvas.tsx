@@ -46,9 +46,10 @@ function CinematicCamera({
     if (!focusedRoomId) return;
     const room = rooms.find((r) => r.id === focusedRoomId);
     if (!room) return;
+    const floorY = (room.floor ?? 0) * ((room.height ?? 2.8) + 0.35);
     const dist = Math.max(room.width, room.length) * 1.8 + 4;
-    goalPos.current.set(room.x + dist * 0.7, dist * 0.85, room.z + dist * 0.7);
-    goalTarget.current.set(room.x, 0.5, room.z);
+    goalPos.current.set(room.x + dist * 0.7, floorY + dist * 0.85, room.z + dist * 0.7);
+    goalTarget.current.set(room.x, floorY + 0.5, room.z);
     intro.current = false;
   }, [focusedRoomId, rooms]);
 
@@ -72,18 +73,26 @@ function SceneContent() {
   const doors = usePlanStore((s) => s.doors);
   const furniture = usePlanStore((s) => s.furniture);
   const windows = usePlanStore((s) => s.windows);
+  const activeFloor = usePlanStore((s) => s.activeFloor);
   const hoveredRoomId = usePlanStore((s) => s.hoveredRoomId);
   const focusedRoomId = usePlanStore((s) => s.focusedRoomId);
   const generationKey = usePlanStore((s) => s.generationKey);
   const setHoveredRoom = usePlanStore((s) => s.setHoveredRoom);
   const setFocusedRoom = usePlanStore((s) => s.setFocusedRoom);
 
+  const visibleRooms = useMemo(() => {
+    if (activeFloor === "all") return rooms;
+    return rooms.filter((r) => (r.floor ?? 0) === activeFloor);
+  }, [rooms, activeFloor]);
+
+  const visibleIds = useMemo(() => new Set(visibleRooms.map((r) => r.id)), [visibleRooms]);
+
   const span = useMemo(() => {
-    if (!rooms.length) return 12;
-    const xs = rooms.flatMap((r) => [r.x - r.width / 2, r.x + r.width / 2]);
-    const zs = rooms.flatMap((r) => [r.z - r.length / 2, r.z + r.length / 2]);
+    if (!visibleRooms.length) return 12;
+    const xs = visibleRooms.flatMap((r) => [r.x - r.width / 2, r.x + r.width / 2]);
+    const zs = visibleRooms.flatMap((r) => [r.z - r.length / 2, r.z + r.length / 2]);
     return Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...zs) - Math.min(...zs), 8);
-  }, [rooms]);
+  }, [visibleRooms]);
 
   return (
     <>
@@ -121,13 +130,13 @@ function SceneContent() {
 
       <Floor size={Math.max(28, span + 10)} />
 
-      {rooms.map((room) => (
+      {visibleRooms.map((room) => (
         <Room
           key={room.id}
           room={room}
-          doors={doors}
-          windows={windows}
-          furniture={furniture}
+          doors={doors.filter((d) => visibleIds.has(d.from) || visibleIds.has(d.to))}
+          windows={windows.filter((w) => visibleIds.has(w.room_id))}
+          furniture={furniture.filter((f) => visibleIds.has(f.room_id))}
           highlighted={hoveredRoomId === room.id || focusedRoomId === room.id}
           onHover={setHoveredRoom}
           onClick={setFocusedRoom}

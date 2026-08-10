@@ -37,6 +37,7 @@ class PlacedRoom(RoomSpec):
     x: float = Field(..., description="World X (center, meters)")
     z: float = Field(..., description="World Z (center, meters)")
     height: float = Field(default=2.8, description="Wall height in meters")
+    floor: int = Field(default=0, ge=0, le=5, description="Storey index (0 = ground)")
 
 
 class Door(BaseModel):
@@ -95,6 +96,14 @@ class GenerateLayoutRequest(BaseModel):
     )
 
 
+class PipelineStepModel(BaseModel):
+    """One stage of the multi-step graph layout pipeline (for UI storytelling)."""
+
+    name: str
+    detail: str
+    meta: dict = Field(default_factory=dict)
+
+
 class GenerateLayoutResponse(BaseModel):
     prompt: str
     rooms: list[PlacedRoom]
@@ -106,6 +115,9 @@ class GenerateLayoutResponse(BaseModel):
     source: Literal["ollama", "gemini", "fallback"]
     sample: bool = False
     id: str | None = None  # set when persisted
+    floors: int = 1
+    pipeline: list[PipelineStepModel] = Field(default_factory=list)
+    version: int | None = None
 
 
 class SavePlanRequest(BaseModel):
@@ -117,8 +129,24 @@ class SavePlanRequest(BaseModel):
     windows: list[WindowSpec] = Field(default_factory=list)
     bounds: dict[str, float]
     source: str = "fallback"
+    floors: int = 1
+    pipeline: list[PipelineStepModel] = Field(default_factory=list)
+    # When set, append a new version under this plan id.
+    plan_id: str | None = None
 
 
 class SavePlanResponse(BaseModel):
     id: str
     url: str
+    version: int = 1
+
+
+class PlanVersionSummary(BaseModel):
+    version: int
+    created_at: str
+    prompt: str
+
+
+class PlanVersionsResponse(BaseModel):
+    id: str
+    versions: list[PlanVersionSummary]

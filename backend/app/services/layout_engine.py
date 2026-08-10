@@ -443,6 +443,7 @@ def arrange_rooms(rooms: list[RoomSpec], wall_height: float = 2.8) -> list[Place
                 x=round(rect.x, 3),
                 z=round(rect.z, 3),
                 height=wall_height,
+                floor=0,
             )
         )
     return result
@@ -471,6 +472,9 @@ def build_doors_and_adjacency(
     for i, a_id in enumerate(ids):
         for b_id in ids[i + 1 :]:
             a, b = by_id[a_id], by_id[b_id]
+            # Multi-floor: never cut doors between storeys even if footprints overlap.
+            if getattr(a, "floor", 0) != getattr(b, "floor", 0):
+                continue
             hit = rects[a_id].shared_wall(rects[b_id])
             if not hit:
                 continue

@@ -112,7 +112,18 @@ class LayoutLLMService:
         rooms: list[RoomSpec] = []
 
         bhk = re.search(r"(\d)\s*bhk", text)
-        bedroom_count = int(bhk.group(1)) if bhk else (1 if "bedroom" in text else 0)
+        beds_n = re.search(r"(\d+)\s*bedrooms?", text)
+        if bhk:
+            bedroom_count = int(bhk.group(1))
+        elif beds_n:
+            bedroom_count = int(beds_n.group(1))
+        elif "bedroom" in text:
+            bedroom_count = 1
+        else:
+            bedroom_count = 0
+
+        bath_n = re.search(r"(\d+)\s*bathrooms?", text)
+        bathroom_count = int(bath_n.group(1)) if bath_n else None
 
         def add(room_type: str, count: int = 1, label: str | None = None) -> None:
             w, l = DEFAULT_SIZES[room_type]
@@ -128,7 +139,10 @@ class LayoutLLMService:
             add("bedroom", bedroom_count, "Bedroom")
             add("hall")
             add("kitchen")
-            add("bathroom", max(1, bedroom_count - 1 if bedroom_count > 1 else 1))
+            baths = bathroom_count if bathroom_count is not None else max(1, bedroom_count - 1 if bedroom_count > 1 else 1)
+            add("bathroom", baths)
+            if any(k in text for k in ("living", "duplex", "storey", "story", "family")):
+                add("living")
         else:
             # Keyword scan
             keywords = [

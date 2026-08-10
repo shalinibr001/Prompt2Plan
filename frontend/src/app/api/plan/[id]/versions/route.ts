@@ -1,5 +1,5 @@
 /**
- * Next.js BFF proxy → FastAPI GET /plan/{id}
+ * Next.js BFF proxy → FastAPI GET /plan/{id}/versions
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -7,7 +7,7 @@ import { NextRequest, NextResponse } from "next/server";
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
 
 export async function GET(
-  req: NextRequest,
+  _req: NextRequest,
   context: { params: Promise<{ id: string }> },
 ) {
   const { id } = await context.params;
@@ -15,11 +15,8 @@ export async function GET(
     return NextResponse.json({ detail: "Missing plan id" }, { status: 400 });
   }
 
-  const version = req.nextUrl.searchParams.get("version");
-  const qs = version ? `?version=${encodeURIComponent(version)}` : "";
-
   try {
-    const upstream = await fetch(`${API_URL}/plan/${encodeURIComponent(id)}${qs}`, {
+    const upstream = await fetch(`${API_URL}/plan/${encodeURIComponent(id)}/versions`, {
       cache: "no-store",
     });
     const data = await upstream.json();

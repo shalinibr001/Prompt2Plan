@@ -30,6 +30,13 @@ export interface RoomData {
   z: number;
   height?: number;
   label?: string;
+  floor?: number;
+}
+
+export interface PipelineStep {
+  name: string;
+  detail: string;
+  meta?: Record<string, unknown>;
 }
 
 export interface DoorData {
