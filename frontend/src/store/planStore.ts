@@ -1,18 +1,14 @@
 "use client";
 
 import { create } from "zustand";
-import { generateLayout } from "@/lib/api";
-import {
-  generateRoomsByCount,
-  HARDCODED_LAYOUT,
-  ROOM_COLORS,
-  type RoomData,
-} from "@/lib/types";
-
-export type LayoutSource = "hardcoded" | "manual" | "ollama" | "gemini" | "fallback";
+import { generateLayout } from "@/lib/ai/client";
+import { generateRoomsByCount, HARDCODED_LAYOUT } from "@/lib/geometry/rooms";
+import { downloadPlanJson } from "@/lib/utils/export";
+import { clearHistory, loadHistory, saveHistoryEntry } from "@/lib/utils/history";
+import { applyTheme, getStoredTheme, toggleTheme, type ThemeMode } from "@/lib/utils/theme";
+import type { LayoutSource, PlanSnapshot, RoomData } from "@/lib/types";
 
 interface PlanState {
-  /** Phase 1 default: hardcoded rooms */
   rooms: RoomData[];
   roomCount: number;
   prompt: string;
@@ -20,18 +16,34 @@ interface PlanState {
   loading: boolean;
   error: string | null;
   lastPrompt: string | null;
+  history: PlanSnapshot[];
+  theme: ThemeMode;
 
   setRoomCount: (n: number) => void;
   setPrompt: (prompt: string) => void;
+  hydrate: () => void;
 
-  /** Phase 1 – reset to hardcoded sample */
   loadHardcoded: () => void;
-  /** Phase 2 – generate N rooms on the frontend */
   generateByCount: () => void;
-  /** Phase 3 – ask backend (Ollama) for a layout */
   generateFromPrompt: (prompt?: string) => Promise<void>;
   regenerate: () => Promise<void>;
   clear: () => void;
+
+  exportJson: () => void;
+  loadFromHistory: (id: string) => void;
+  wipeHistory: () => void;
+  toggleThemeMode: () => void;
+}
+
+function pushHistory(
+  set: (partial: Partial<PlanState>) => void,
+  prompt: string,
+  rooms: RoomData[],
+  source: LayoutSource,
+) {
+  if (!prompt || !rooms.length) return;
+  const history = saveHistoryEntry({ prompt, rooms, source });
+  set({ history });
 }
 
 export const usePlanStore = create<PlanState>((set, get) => ({
@@ -42,9 +54,17 @@ export const usePlanStore = create<PlanState>((set, get) => ({
   loading: false,
   error: null,
   lastPrompt: null,
+  history: [],
+  theme: "dark",
 
   setRoomCount: (n) => set({ roomCount: n, error: null }),
   setPrompt: (prompt) => set({ prompt, error: null }),
+
+  hydrate: () => {
+    const theme = getStoredTheme();
+    applyTheme(theme);
+    set({ history: loadHistory(), theme });
+  },
 
   loadHardcoded: () =>
     set({
@@ -60,12 +80,9 @@ export const usePlanStore = create<PlanState>((set, get) => ({
       set({ error: "Enter a number of rooms between 1 and 12." });
       return;
     }
-    set({
-      rooms: generateRoomsByCount(roomCount),
-      source: "manual",
-      error: null,
-      lastPrompt: null,
-    });
+    const rooms = generateRoomsByCount(roomCount);
+    set({ rooms, source: "manual", error: null, lastPrompt: null });
+    pushHistory(set, `Manual ${roomCount} rooms`, rooms, "manual");
   },
 
   generateFromPrompt: async (override) => {
@@ -78,25 +95,13 @@ export const usePlanStore = create<PlanState>((set, get) => ({
     set({ loading: true, error: null, prompt });
     try {
       const data = await generateLayout(prompt);
-      const rooms: RoomData[] = data.rooms.map((r) => {
-        const type = (Object.keys(ROOM_COLORS).includes(r.type) ? r.type : "other") as RoomData["type"];
-        return {
-          id: r.id,
-          type,
-          width: r.width,
-          length: r.length,
-          x: r.x,
-          z: r.z,
-          height: r.height,
-          label: r.label ?? r.type,
-        };
-      });
       set({
-        rooms,
+        rooms: data.rooms,
         source: data.source,
         lastPrompt: data.prompt,
         loading: false,
       });
+      pushHistory(set, data.prompt, data.rooms, data.source);
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Could not generate layout. Is the API running?";
@@ -105,7 +110,7 @@ export const usePlanStore = create<PlanState>((set, get) => ({
   },
 
   regenerate: async () => {
-    const { lastPrompt, prompt, source, roomCount } = get();
+    const { lastPrompt, prompt, source } = get();
     if (source === "manual") {
       get().generateByCount();
       return;
@@ -115,7 +120,6 @@ export const usePlanStore = create<PlanState>((set, get) => ({
       return;
     }
     await get().generateFromPrompt(lastPrompt ?? prompt);
-    void roomCount; // keep lint quiet if unused in branch
   },
 
   clear: () =>
@@ -125,4 +129,35 @@ export const usePlanStore = create<PlanState>((set, get) => ({
       lastPrompt: null,
       source: "manual",
     }),
+
+  exportJson: () => {
+    const { rooms, lastPrompt, prompt, source } = get();
+    if (!rooms.length) {
+      set({ error: "Nothing to export yet." });
+      return;
+    }
+    downloadPlanJson({ prompt: lastPrompt ?? (prompt || null), rooms, source });
+  },
+
+  loadFromHistory: (id) => {
+    const item = get().history.find((h) => h.id === id);
+    if (!item) return;
+    set({
+      rooms: item.rooms,
+      source: item.source,
+      lastPrompt: item.prompt,
+      prompt: item.prompt,
+      error: null,
+    });
+  },
+
+  wipeHistory: () => {
+    clearHistory();
+    set({ history: [] });
+  },
+
+  toggleThemeMode: () => {
+    const next = toggleTheme(get().theme);
+    set({ theme: next });
+  },
 }));

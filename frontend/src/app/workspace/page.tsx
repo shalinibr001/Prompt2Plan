@@ -6,6 +6,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Navbar } from "@/components/ui/Navbar";
 import { PromptInput } from "@/components/ui/PromptInput";
 import { Sidebar } from "@/components/ui/Sidebar";
+import { usePlanStore } from "@/store/planStore";
 
 const ease = [0.4, 0, 0.2, 1] as const;
 
@@ -33,6 +34,11 @@ const SceneCanvas = dynamic(
 export default function WorkspacePage() {
   const [isDesktop, setIsDesktop] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const hydrate = usePlanStore((s) => s.hydrate);
+
+  useEffect(() => {
+    hydrate();
+  }, [hydrate]);
 
   useEffect(() => {
     const mq = window.matchMedia("(min-width: 768px)");

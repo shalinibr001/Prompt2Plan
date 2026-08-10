@@ -25,6 +25,7 @@ async def generate_layout(body: GenerateLayoutRequest) -> GenerateLayoutResponse
     if not prompt:
         raise HTTPException(status_code=400, detail="Prompt cannot be empty")
 
+    # Stateless service — cheap to construct; keeps route free of global mutable state.
     llm = LayoutLLMService()
     room_specs, source = await llm.generate_rooms(prompt)
     placed = arrange_rooms(room_specs)

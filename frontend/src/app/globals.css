@@ -3,7 +3,8 @@
 @tailwind utilities;
 
 /* ── Design System tokens ── */
-:root {
+:root,
+html[data-theme="dark"] {
   --bg: #0a0a0a;
   --surface: rgba(255, 255, 255, 0.05);
   --border: rgba(255, 255, 255, 0.08);
@@ -13,6 +14,31 @@
   --accent: #3b82f6;
   --violet: #8b5cf6;
   --ease: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+html[data-theme="light"],
+html.light {
+  --bg: #f4f4f5;
+  --surface: rgba(255, 255, 255, 0.72);
+  --border: rgba(0, 0, 0, 0.08);
+  --text: #18181b;
+  --secondary: #52525b;
+  --muted: #71717a;
+  --accent: #2563eb;
+  --violet: #7c3aed;
+}
+
+html[data-theme="light"] body,
+html.light body {
+  background: var(--bg);
+  color: var(--text);
+}
+
+html[data-theme="light"] .glass-panel,
+html.light .glass-panel {
+  background: rgba(255, 255, 255, 0.72);
+  border-color: rgba(0, 0, 0, 0.08);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
 }
 
 html,

@@ -7,20 +7,25 @@ import { ROOM_COLORS, type RoomType } from "@/lib/types";
 const ease = [0.4, 0, 0.2, 1] as const;
 
 interface SidebarProps {
-  /** Controlled open state (mobile drawer). Desktop always visible. */
   open?: boolean;
   onClose?: () => void;
 }
 
-/** Floating glass sidebar — 240px, 20px radius, slide-in */
+/** Floating glass sidebar with controls, export, history, theme. */
 export function Sidebar({ open = true, onClose }: SidebarProps) {
   const rooms = usePlanStore((s) => s.rooms);
   const source = usePlanStore((s) => s.source);
   const loading = usePlanStore((s) => s.loading);
   const lastPrompt = usePlanStore((s) => s.lastPrompt);
+  const history = usePlanStore((s) => s.history);
+  const theme = usePlanStore((s) => s.theme);
   const regenerate = usePlanStore((s) => s.regenerate);
   const clear = usePlanStore((s) => s.clear);
   const loadHardcoded = usePlanStore((s) => s.loadHardcoded);
+  const exportJson = usePlanStore((s) => s.exportJson);
+  const loadFromHistory = usePlanStore((s) => s.loadFromHistory);
+  const wipeHistory = usePlanStore((s) => s.wipeHistory);
+  const toggleThemeMode = usePlanStore((s) => s.toggleThemeMode);
 
   const types = Array.from(new Set(rooms.map((r) => r.type))) as RoomType[];
 
@@ -33,27 +38,40 @@ export function Sidebar({ open = true, onClose }: SidebarProps) {
         pointerEvents: open ? "auto" : "none",
       }}
       transition={{ duration: 0.45, ease }}
-      className={`flex w-[240px] max-w-[85vw] flex-col gap-3 ${
-        open ? "" : "md:pointer-events-auto md:opacity-100"
-      }`}
+      className="flex w-[240px] max-w-[85vw] flex-col gap-3"
     >
       <div className="glass-panel rounded-panel p-4">
         <div className="flex items-center justify-between">
           <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-ds-muted">
             Controls
           </p>
-          {onClose && (
+          <div className="flex items-center gap-1">
             <button
               type="button"
-              aria-label="Close"
-              onClick={onClose}
-              className="icon-btn h-7 w-7 md:hidden"
+              aria-label="Toggle theme"
+              onClick={toggleThemeMode}
+              className="icon-btn h-7 w-7"
+              title={`Switch to ${theme === "dark" ? "light" : "dark"}`}
             >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                <path d="M6 6l12 12M18 6L6 18" strokeLinecap="round" />
-              </svg>
+              {theme === "dark" ? (
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <circle cx="12" cy="12" r="4" />
+                  <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" strokeLinecap="round" />
+                </svg>
+              ) : (
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <path d="M21 14.5A8.5 8.5 0 1 1 9.5 3a7 7 0 0 0 11.5 11.5z" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              )}
             </button>
-          )}
+            {onClose && (
+              <button type="button" aria-label="Close" onClick={onClose} className="icon-btn h-7 w-7 md:hidden">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <path d="M6 6l12 12M18 6L6 18" strokeLinecap="round" />
+                </svg>
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="mt-4 flex flex-col gap-2">
@@ -61,7 +79,6 @@ export function Sidebar({ open = true, onClose }: SidebarProps) {
             type="button"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.97 }}
-            transition={{ duration: 0.3, ease }}
             className="btn-primary w-full"
             disabled={loading}
             onClick={() => void regenerate()}
@@ -72,7 +89,16 @@ export function Sidebar({ open = true, onClose }: SidebarProps) {
             type="button"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.97 }}
-            transition={{ duration: 0.3, ease }}
+            className="btn-ghost w-full"
+            disabled={loading || !rooms.length}
+            onClick={exportJson}
+          >
+            Export JSON
+          </motion.button>
+          <motion.button
+            type="button"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.97 }}
             className="btn-ghost w-full"
             disabled={loading}
             onClick={loadHardcoded}
@@ -83,7 +109,6 @@ export function Sidebar({ open = true, onClose }: SidebarProps) {
             type="button"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.97 }}
-            transition={{ duration: 0.3, ease }}
             className="btn-ghost w-full"
             disabled={loading || !rooms.length}
             onClick={clear}
@@ -102,7 +127,12 @@ export function Sidebar({ open = true, onClose }: SidebarProps) {
         </div>
 
         {!rooms.length ? (
-          <p className="mt-6 text-small text-ds-muted">No rooms yet.</p>
+          <div className="mt-6 space-y-2">
+            <p className="text-small text-ds-muted">No rooms yet.</p>
+            <p className="text-[12px] font-light text-ds-muted">
+              Try a sample prompt below the input, or reset the Phase 1 layout.
+            </p>
+          </div>
         ) : (
           <div className="mt-4 min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
             <div className="grid grid-cols-2 gap-2">
@@ -155,6 +185,36 @@ export function Sidebar({ open = true, onClose }: SidebarProps) {
                     {t}
                   </span>
                 ))}
+              </div>
+            )}
+
+            {history.length > 0 && (
+              <div className="border-t border-white/[0.06] pt-3">
+                <div className="mb-2 flex items-center justify-between">
+                  <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-ds-muted">
+                    History
+                  </p>
+                  <button
+                    type="button"
+                    onClick={wipeHistory}
+                    className="text-[10px] font-light text-ds-muted hover:text-white"
+                  >
+                    Clear
+                  </button>
+                </div>
+                <ul className="space-y-1">
+                  {history.slice(0, 5).map((h) => (
+                    <li key={h.id}>
+                      <button
+                        type="button"
+                        onClick={() => loadFromHistory(h.id)}
+                        className="w-full truncate rounded-xl border border-transparent px-2 py-1.5 text-left text-[11px] font-light text-ds-secondary transition hover:border-white/[0.08] hover:bg-white/[0.04] hover:text-white"
+                      >
+                        {h.prompt}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
               </div>
             )}
           </div>

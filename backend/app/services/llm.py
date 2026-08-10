@@ -16,6 +16,7 @@ import httpx
 
 from app.config import Settings, get_settings
 from app.models.layout import RoomSpec
+from app.services.validators import DEFAULT_SIZES, validate_rooms_payload
 
 logger = logging.getLogger(__name__)
 
@@ -30,37 +31,6 @@ Rules:
 - Prefer "hall" for circulation / living-dining combined spaces when ambiguous.
 - Keep room counts reasonable (max 12 rooms).
 """
-
-VALID_TYPES = {
-    "bedroom",
-    "kitchen",
-    "hall",
-    "living",
-    "bathroom",
-    "balcony",
-    "dining",
-    "office",
-    "closet",
-    "utility",
-    "garage",
-    "other",
-}
-
-# Default sizes (width, length) in meters when LLM omits dimensions.
-DEFAULT_SIZES: dict[str, tuple[float, float]] = {
-    "bedroom": (3.5, 4.0),
-    "kitchen": (3.0, 2.5),
-    "hall": (5.0, 4.0),
-    "living": (5.0, 4.0),
-    "bathroom": (2.0, 2.5),
-    "balcony": (2.5, 1.5),
-    "dining": (3.5, 3.0),
-    "office": (3.0, 3.0),
-    "closet": (1.5, 2.0),
-    "utility": (2.0, 2.0),
-    "garage": (5.0, 3.0),
-    "other": (3.0, 3.0),
-}
 
 
 Source = Literal["ollama", "gemini", "fallback"]
@@ -134,21 +104,7 @@ class LayoutLLMService:
 
     def _parse_rooms_json(self, raw: str) -> list[RoomSpec]:
         payload = _extract_json(raw)
-        rooms_data = payload.get("rooms")
-        if not isinstance(rooms_data, list) or not rooms_data:
-            raise ValueError("JSON missing non-empty 'rooms' array")
-
-        rooms: list[RoomSpec] = []
-        for item in rooms_data:
-            if not isinstance(item, dict):
-                continue
-            room = _normalize_room(item)
-            if room:
-                rooms.append(room)
-
-        if not rooms:
-            raise ValueError("No valid rooms parsed from LLM output")
-        return rooms[:12]
+        return validate_rooms_payload(payload.get("rooms"))
 
     def _heuristic_rooms(self, prompt: str) -> list[RoomSpec]:
         """Simple keyword / BHK parser used when no LLM is available."""
@@ -225,36 +181,3 @@ def _extract_json(raw: str) -> dict[str, Any]:
         raise ValueError("Expected a JSON object")
     return data
 
-
-def _normalize_room(item: dict[str, Any]) -> RoomSpec | None:
-    raw_type = str(item.get("type", "other")).lower().strip()
-    aliases = {
-        "living room": "living",
-        "livingroom": "living",
-        "master bedroom": "bedroom",
-        "bath": "bathroom",
-        "wc": "bathroom",
-        "toilet": "bathroom",
-        "study": "office",
-        "corridor": "hall",
-        "lobby": "hall",
-        "lounge": "living",
-    }
-    room_type = aliases.get(raw_type, raw_type)
-    if room_type not in VALID_TYPES:
-        room_type = "other"
-
-    defaults = DEFAULT_SIZES[room_type]
-    try:
-        width = float(item.get("width", defaults[0]))
-        length = float(item.get("length", defaults[1]))
-    except (TypeError, ValueError):
-        width, length = defaults
-
-    width = max(1.0, min(30.0, round(width, 1)))
-    length = max(1.0, min(30.0, round(length, 1)))
-    label = item.get("label")
-    if label is not None:
-        label = str(label)[:60]
-
-    return RoomSpec(type=room_type, width=width, length=length, label=label)  # type: ignore[arg-type]

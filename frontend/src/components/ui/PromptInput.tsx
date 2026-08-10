@@ -3,7 +3,7 @@
 import { FormEvent, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { usePlanStore } from "@/store/planStore";
-import { SAMPLE_PROMPTS } from "@/lib/api";
+import { SAMPLE_PROMPTS } from "@/lib/ai/client";
 
 const ease = [0.4, 0, 0.2, 1] as const;
 
